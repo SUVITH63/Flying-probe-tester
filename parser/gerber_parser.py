@@ -117,5 +117,8 @@ class GerberParser:
     def _parse_coord(self, raw_str: str, decimal_digits: int) -> float:
         if not raw_str:
             return 0.0
-        val = int(raw_str)
+        try:
+            val = int(raw_str)
+        except Exception:
+            val = 0
         return val / (10 ** decimal_digits)

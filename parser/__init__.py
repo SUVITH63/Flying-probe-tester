@@ -1,5 +1,5 @@
 """
-OpenFPT Host Parser Package
+FPTester Host Parser Package
 Converts KiCad PCB and Gerber files into automated probe test plans.
 """
 from .models import Pad, Component, Net, Board, TestPair, TestJob

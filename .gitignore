@@ -1,13 +1,7 @@
-# Byte-compiled / optimized / DLL files
+*.gguf
+*.zip
+*.exe
+llm/models/
 __pycache__/
-*.py[cod]
-*$py.class
-
-# macOS system files
-._*
+*.pyc
 .DS_Store
-
-# Virtual environments
-venv/
-env/
-ENV/

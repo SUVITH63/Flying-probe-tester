@@ -1,5 +1,5 @@
 """
-OpenFPT AI Test Plan Generator & Circuit Pattern Analyzer
+FPTester AI Test Plan Generator & Circuit Pattern Analyzer
 Supports Built-in Offline AI, Google Gemini API, OpenAI GPT API, and Local Ollama LLM.
 Uses Python standard library (urllib) for zero external pip dependencies.
 """
@@ -10,19 +10,25 @@ import urllib.request
 from typing import List, Dict, Any, Optional
 from .models import Board, Net, Pad, TestPair, TestJob
 
-logger = logging.getLogger("OpenFPT_AI_Planner")
+try:
+    from llm.local_llm import LocalEmbeddedLLM
+except ImportError:
+    from ..llm.local_llm import LocalEmbeddedLLM
+
+logger = logging.getLogger("FPTester_AI_Planner")
 
 class AITestPlanner:
     def __init__(self, provider: str = "built_in", api_key: Optional[str] = None, custom_url: Optional[str] = None):
         self.provider = (provider or "built_in").lower()
         self.api_key = api_key or os.getenv("GEMINI_API_KEY") or os.getenv("OPENAI_API_KEY")
         self.custom_url = custom_url or "http://localhost:11434"
+        self.local_llm = LocalEmbeddedLLM()
 
     def generate_plan(self, board: Board, job_id: int = 101) -> TestJob:
         """
         Main entry point for generating an AI probe test plan.
         Supports:
-        - 'built_in': Local zero-dependency Heuristic Circuit Pattern AI Engine
+        - 'built_in' / 'local_llm': Embedded Offline Local LLM Reasoning Engine
         - 'gemini': Google Gemini API
         - 'openai': OpenAI GPT-4o / GPT-3.5 API
         - 'ollama': Local Ollama LLM Server
@@ -36,28 +42,28 @@ class AITestPlanner:
                 test_pairs = self._generate_with_gemini(board)
                 logger.info(f"Successfully generated {len(test_pairs)} test pairs using Gemini API.")
             except Exception as e:
-                logger.warning(f"Gemini API call failed ({e}). Falling back to Built-in AI.")
-                test_pairs = self._generate_with_heuristic_ai(board)
+                logger.warning(f"Gemini API call failed ({e}). Falling back to Embedded Local LLM.")
+                test_pairs = self.local_llm.plan_test_sequence(board)
 
         elif self.provider == "openai" and self.api_key:
             try:
                 test_pairs = self._generate_with_openai(board)
                 logger.info(f"Successfully generated {len(test_pairs)} test pairs using OpenAI API.")
             except Exception as e:
-                logger.warning(f"OpenAI API call failed ({e}). Falling back to Built-in AI.")
-                test_pairs = self._generate_with_heuristic_ai(board)
+                logger.warning(f"OpenAI API call failed ({e}). Falling back to Embedded Local LLM.")
+                test_pairs = self.local_llm.plan_test_sequence(board)
 
         elif self.provider == "ollama":
             try:
                 test_pairs = self._generate_with_ollama(board)
                 logger.info(f"Successfully generated {len(test_pairs)} test pairs using Ollama LLM.")
             except Exception as e:
-                logger.warning(f"Ollama API call failed ({e}). Falling back to Built-in AI.")
-                test_pairs = self._generate_with_heuristic_ai(board)
+                logger.warning(f"Ollama API call failed ({e}). Falling back to Embedded Local LLM.")
+                test_pairs = self.local_llm.plan_test_sequence(board)
 
         else:
-            logger.info("Using Built-in Zero-Dependency Heuristic Circuit Pattern AI Engine.")
-            test_pairs = self._generate_with_heuristic_ai(board)
+            logger.info("🤖 Using Embedded Offline Local LLM Model Engine.")
+            test_pairs = self.local_llm.plan_test_sequence(board)
 
         return TestJob(job_id=job_id, board_name=board.name, test_pairs=test_pairs)
 

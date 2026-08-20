@@ -1,5 +1,5 @@
 """
-Integration tests for OpenFPT FastAPI Server, AI Planner, and Serial Dispatcher
+Integration tests for FPTester FastAPI Server, AI Planner, and Serial Dispatcher
 """
 import unittest
 import os

@@ -1,9 +1,21 @@
 @echo off
-title FPTester Flying Probe PCB Tester Web App
+title FPTester — Flying Probe PCB Tester Launcher
 echo =========================================================
 echo    FPTester — Automated Flying Probe PCB Tester Web App
 echo =========================================================
 echo.
+
+if exist "dist\FPTester\FPTester.exe" (
+    echo [*] Starting FPTester executable from dist\FPTester...
+    start "" "dist\FPTester\FPTester.exe"
+    goto end
+)
+
+if exist "FPTester.exe" (
+    echo [*] Starting FPTester.exe...
+    start "" "FPTester.exe"
+    goto end
+)
 
 where py >nul 2>nul
 if %errorlevel%==0 (
@@ -38,17 +50,7 @@ if %errorlevel%==0 (
     goto end
 )
 
-echo [!] Python command was not detected in your system PATH.
-echo [!] Attempting to run direct executable or script...
-if exist FPTester-Windows.exe (
-    start FPTester-Windows.exe
-    goto end
-)
-
-echo.
-echo [ERROR] Could not start Python server automatically.
-echo Please install Python (https://www.python.org) or download FPTester-Windows.exe directly from GitHub Releases!
-echo.
+echo [ERROR] Could not find FPTester.exe or Python installation.
 pause
 
 :end

@@ -1,12 +1,40 @@
 """
 KiCad PCB S-Expression Parser
 Extracts components, pad coordinates (using 2D rotation matrix math), and net assignments.
-Supports KiCad v5, v6, v7, and v8 formats.
+Supports KiCad v5, v6, v7, v8, and v9 formats with robust string/int net identification.
 """
 import math
 import re
 from typing import List, Dict, Any, Tuple, Optional
 from .models import Board, Component, Pad, Net
+
+def _safe_int(val: Any, default: int = 0) -> int:
+    """Safely converts string or list tokens to integer without throwing ValueError or TypeError."""
+    if isinstance(val, int):
+        return val
+    if isinstance(val, list) and val:
+        val = val[-1]
+    if val is None:
+        return default
+    try:
+        s = str(val).strip()
+        if s.isdigit() or (s.startswith('-') and s[1:].isdigit()):
+            return int(s)
+    except Exception:
+        pass
+    return default
+
+def _clean_str(val: Any) -> str:
+    """Extracts clean string from token or sublist like ['name', 'Net-(U1-PD1)']."""
+    if isinstance(val, list) and val:
+        val = val[-1]
+    if val is None:
+        return ""
+    s = str(val).strip()
+    if s.startswith('"') and s.endswith('"'):
+        s = s[1:-1]
+    return s
+
 
 class SExpParser:
     """Simple robust S-expression tokenizer and parser for KiCad PCB files."""
@@ -62,20 +90,37 @@ class KiCadPCBParser:
             raise ValueError("Invalid KiCad PCB file format (missing 'kicad_pcb' root element).")
 
         board = Board(name=board_name)
-        net_map: Dict[int, str] = {}
+        net_map: Dict[Any, str] = {}
         components: List[Component] = []
         all_pads: List[Pad] = []
 
-        # Step 1: Extract Nets
+        # Step 1: Extract Nets across KiCad v5/v6/v7/v8/v9 syntax formats
         for item in sexp:
-            if isinstance(item, list) and len(item) >= 3 and item[0] == 'net':
-                try:
-                    net_id = int(item[1])
-                    net_name = str(item[2])
-                    net_map[net_id] = net_name
+            if isinstance(item, list) and len(item) >= 2 and item[0] == 'net':
+                raw_id = item[1]
+                raw_name = item[2] if len(item) >= 3 else None
+                
+                # Check for sublists: (net (code 1) (name "+3V3"))
+                code_sub = next((sub for sub in item if isinstance(sub, list) and len(sub) >= 2 and sub[0] == 'code'), None)
+                name_sub = next((sub for sub in item if isinstance(sub, list) and len(sub) >= 2 and sub[0] == 'name'), None)
+                
+                if code_sub:
+                    raw_id = code_sub[1]
+                if name_sub:
+                    raw_name = name_sub[1]
+
+                net_id = _safe_int(raw_id, 0)
+                net_name = _clean_str(raw_name) if raw_name else _clean_str(raw_id)
+                if not net_name:
+                    net_name = f"Net-{net_id}"
+
+                net_map[net_id] = net_name
+                net_map[str(net_id)] = net_name
+                net_map[str(raw_id)] = net_name
+                net_map[net_name] = net_name
+
+                if net_name not in board.nets:
                     board.nets[net_name] = Net(net_id=net_id, name=net_name)
-                except Exception:
-                    continue
 
         # Step 2: Extract Footprints (Modules in v5, Footprints in v6+)
         for item in sexp:
@@ -86,7 +131,9 @@ class KiCadPCBParser:
                     all_pads.extend(comp.pads)
                     # Assign pads to nets
                     for pad in comp.pads:
-                        if pad.net_name in board.nets:
+                        if pad.net_name:
+                            if pad.net_name not in board.nets:
+                                board.nets[pad.net_name] = Net(net_id=pad.net_id, name=pad.net_name)
                             board.nets[pad.net_name].pads.append(pad)
 
         board.components = components
@@ -134,8 +181,8 @@ class KiCadPCBParser:
 
         return board
 
-    def _parse_footprint(self, fp_sexp: List[Any], net_map: Dict[int, str]) -> Optional[Component]:
-        fp_name = fp_sexp[1] if len(fp_sexp) > 1 and isinstance(fp_sexp[1], str) else "Unknown"
+    def _parse_footprint(self, fp_sexp: List[Any], net_map: Dict[Any, str]) -> Optional[Component]:
+        fp_name = _clean_str(fp_sexp[1]) if len(fp_sexp) > 1 else "Unknown"
         ref = "REF?"
         val = ""
         fp_x, fp_y, fp_rot = 0.0, 0.0, 0.0
@@ -152,8 +199,8 @@ class KiCadPCBParser:
                 fp_rot = float(node[3]) if len(node) > 3 else 0.0
 
             elif tag == 'property' and len(node) >= 3:
-                prop_name = str(node[1])
-                prop_val = str(node[2])
+                prop_name = _clean_str(node[1])
+                prop_val = _clean_str(node[2])
                 if prop_name == "Reference":
                     ref = prop_val
                 elif prop_name == "Value":
@@ -164,9 +211,9 @@ class KiCadPCBParser:
                     text_type = node[1]
                     text_val = node[2]
                     if text_type == 'reference':
-                        ref = str(text_val)
+                        ref = _clean_str(text_val)
                     elif text_type == 'value':
-                        val = str(text_val)
+                        val = _clean_str(text_val)
 
         # Parse pads
         for node in fp_sexp:
@@ -194,10 +241,10 @@ class KiCadPCBParser:
         fp_x: float,
         fp_y: float,
         fp_rot: float,
-        net_map: Dict[int, str]
+        net_map: Dict[Any, str]
     ) -> Optional[Pad]:
-        pad_num = str(pad_sexp[1]) if len(pad_sexp) > 1 else "1"
-        pad_shape = str(pad_sexp[3]) if len(pad_sexp) > 3 else "rect"
+        pad_num = _clean_str(pad_sexp[1]) if len(pad_sexp) > 1 else "1"
+        pad_shape = _clean_str(pad_sexp[3]) if len(pad_sexp) > 3 else "rect"
         
         rel_x, rel_y, pad_rot = 0.0, 0.0, 0.0
         width, height = 1.0, 1.0
@@ -220,18 +267,32 @@ class KiCadPCBParser:
                 height = float(sub[2]) if len(sub) > 2 else 1.0
 
             elif tag == 'layers':
-                layer = str(sub[1]) if len(sub) > 1 else "F.Cu"
+                layer = _clean_str(sub[1]) if len(sub) > 1 else "F.Cu"
 
             elif tag == 'net':
+                raw_id = None
+                raw_name = None
+
                 if len(sub) >= 3:
-                    net_id = int(sub[1])
-                    net_name = str(sub[2])
-                elif len(sub) >= 2:
-                    net_id = int(sub[1])
-                    net_name = net_map.get(net_id, f"Net-({comp_ref}-Pad{pad_num})")
+                    raw_id, raw_name = sub[1], sub[2]
+                elif len(sub) == 2:
+                    val = sub[1]
+                    if isinstance(val, list):
+                        code_sub = next((s for s in sub if isinstance(s, list) and len(s) >= 2 and s[0] == 'code'), None)
+                        name_sub = next((s for s in sub if isinstance(s, list) and len(s) >= 2 and s[0] == 'name'), None)
+                        if code_sub: raw_id = code_sub[1]
+                        if name_sub: raw_name = name_sub[1]
+                    else:
+                        raw_id = val
+
+                net_id = _safe_int(raw_id, 0)
+                if raw_name:
+                    net_name = _clean_str(raw_name)
+                else:
+                    target_key = _clean_str(raw_id)
+                    net_name = net_map.get(raw_id, net_map.get(target_key, net_map.get(net_id, target_key)))
 
         # Apply 2D Rotation Transformation Matrix
-        # KiCad angle is in degrees (counter-clockwise or clockwise depending on convention)
         rad = math.radians(fp_rot)
         cos_a = math.cos(rad)
         sin_a = math.sin(rad)

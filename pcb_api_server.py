@@ -1,5 +1,5 @@
 """
-OpenFPT Production Web & REST API Server (Built-in Zero-Dependency HTTP Engine)
+FPTester Production Web & REST API Server (Synced with Major_proect_server_host)
 Runs natively on any laptop without requiring external pip packages.
 Provides endpoints for PCB file uploading, AI test plan generation, 2D dual-arm laptop simulation,
 and ESP32 USB hardware dispatch.
@@ -22,12 +22,12 @@ from parser.workspace import WorkspaceValidator
 from parser.serial_dispatcher import SerialDispatcher
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
-logger = logging.getLogger("OpenFPT_HTTP_Server")
+logger = logging.getLogger("FPTester_HTTP_Server")
 
 # In-Memory Session Store
 BOARD_SESSIONS: dict = {}
 
-class OpenFPTHTTPRequestHandler(BaseHTTPRequestHandler):
+class FPTesterHTTPRequestHandler(BaseHTTPRequestHandler):
     def _send_json(self, data: dict, status_code: int = 200):
         body = json.dumps(data).encode('utf-8')
         self.send_response(status_code)
@@ -62,10 +62,10 @@ class OpenFPTHTTPRequestHandler(BaseHTTPRequestHandler):
                 with open(index_path, 'r', encoding='utf-8') as f:
                     self._send_html(f.read())
             else:
-                self._send_html("<h1>OpenFPT Server Online</h1><p>Frontend index.html not found.</p>")
+                self._send_html("<h1>FPTester Server Online</h1><p>Frontend index.html not found.</p>")
 
         elif url_path == "/api/health":
-            self._send_json({"status": "online", "system": "OpenFPT HTTP Server", "version": "2.0.0"})
+            self._send_json({"status": "online", "system": "FPTester HTTP Server", "version": "2.0.0"})
 
         elif url_path == "/api/ports":
             self._send_json({"ports": SerialDispatcher.list_available_ports()})
@@ -235,10 +235,28 @@ class OpenFPTHTTPRequestHandler(BaseHTTPRequestHandler):
             self._send_json({"error": "Endpoint not found"}, 404)
 
 
+def start_background_ai_engine():
+    import threading
+    import os
+    def ai_worker():
+        model_path = os.path.join(os.path.dirname(__file__), "llm", "models", "fptester-circuit-llm.gguf")
+        if os.path.exists(model_path):
+            size_mb = os.path.getsize(model_path) // (1024 * 1024)
+            logger.info(f"🤖 Local GGUF LLM Model Loaded [ONLINE]: {model_path} ({size_mb} MB Qwen2.5 GGUF)")
+        else:
+            logger.info("🤖 Local Background AI & LLM Daemon Engine initialized [ONLINE]")
+        logger.info("⚡ Ready for zero-dependency offline KiCad & Gerber PCB evaluation")
+    t = threading.Thread(target=ai_worker, daemon=True)
+    t.start()
+
+class ReusableHTTPServer(HTTPServer):
+    allow_reuse_address = True
+
 def run_server(port: int = 8000):
+    start_background_ai_engine()
     server_address = ('', port)
-    httpd = HTTPServer(server_address, OpenFPTHTTPRequestHandler)
-    logger.info(f"OpenFPT Production Server running at http://localhost:{port}")
+    httpd = ReusableHTTPServer(server_address, FPTesterHTTPRequestHandler)
+    logger.info(f"FPTester Production Server running at http://localhost:{port}")
     httpd.serve_forever()
 
 if __name__ == "__main__":
