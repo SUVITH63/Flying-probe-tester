@@ -175,13 +175,13 @@ class FPTesterHTTPRequestHandler(BaseHTTPRequestHandler):
             board = session["board"]
 
             # Parse optional AI configuration parameters
-            provider = "built_in"
+            provider = "ollama"
             api_key = None
             custom_url = None
             if post_data:
                 try:
                     payload = json.loads(post_data.decode('utf-8'))
-                    provider = payload.get("provider", "built_in")
+                    provider = payload.get("provider", "ollama")
                     api_key = payload.get("api_key")
                     custom_url = payload.get("custom_url")
                 except Exception:

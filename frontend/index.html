@@ -308,10 +308,9 @@
             <div style="display: flex; flex-direction: column; gap: 8px;">
                 <label style="font-size: 11px; color: var(--text-muted);">Select AI Engine Provider:</label>
                 <select id="aiProviderSelect" class="btn btn-secondary" style="padding: 8px; font-size: 12px; width: 100%; text-align: left;">
-                    <option value="built_in">⚡ Built-in Zero-Dependency AI (Offline/Local)</option>
+                    <option value="ollama" selected>🦙 Local Ollama LLM (http://localhost:11434)</option>
                     <option value="gemini">✨ Google Gemini API (Public API Key)</option>
                     <option value="openai">🤖 OpenAI GPT-4o API (Public API Key)</option>
-                    <option value="ollama">🦙 Local Ollama LLM (http://localhost:11434)</option>
                 </select>
 
                 <div id="apiKeyGroup" style="display: none; flex-direction: column; gap: 4px;">
@@ -443,7 +442,7 @@
 
         btnGenPlan.addEventListener('click', async () => {
             if (!currentBoardId) return;
-            const provider = aiProviderSelect ? aiProviderSelect.value : 'built_in';
+            const provider = aiProviderSelect ? aiProviderSelect.value : 'ollama';
             const apiKey = aiApiKey ? aiApiKey.value.trim() : null;
 
             log(`Invoking AI Test Plan Engine (Provider: ${provider})...`);

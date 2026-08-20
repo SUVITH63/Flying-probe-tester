@@ -18,8 +18,8 @@ except ImportError:
 logger = logging.getLogger("FPTester_AI_Planner")
 
 class AITestPlanner:
-    def __init__(self, provider: str = "built_in", api_key: Optional[str] = None, custom_url: Optional[str] = None):
-        self.provider = (provider or "built_in").lower()
+    def __init__(self, provider: str = "ollama", api_key: Optional[str] = None, custom_url: Optional[str] = None):
+        self.provider = (provider or "ollama").lower()
         self.api_key = api_key or os.getenv("GEMINI_API_KEY") or os.getenv("OPENAI_API_KEY")
         self.custom_url = custom_url or "http://localhost:11434"
         self.local_llm = LocalEmbeddedLLM()
