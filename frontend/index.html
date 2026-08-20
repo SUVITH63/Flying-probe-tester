@@ -518,7 +518,7 @@
                     }
 
                     log(`Test #${step.test_id} (${step.net}): ${step.pad_a.ref} -> ${step.pad_b.ref} = ${step.measured_voltage}V (${step.verdict})`);
-                    await new Promise(r => setTimeout(r, 20));
+                    await new Promise(r => setTimeout(r, 350)); // Pause so user can see each test result
                 }
                 log('Dual-arm probing sequence complete! All nets verified.');
             } catch (err) {
@@ -538,10 +538,10 @@
         setTimeout(resizeCanvas, 100);
 
         async function animateArmMove(padA, padB) {
-            const steps = 3;
+            const steps = 12;  // Smooth 12-frame arm movement animation
             for (let i = 1; i <= steps; i++) {
                 drawCanvas(padA, padB, i / steps);
-                await new Promise(r => setTimeout(r, 4));
+                await new Promise(r => setTimeout(r, 18)); // ~216ms total per move
             }
         }
 
