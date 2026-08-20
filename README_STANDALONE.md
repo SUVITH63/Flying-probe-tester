@@ -1,4 +1,4 @@
-# OpenFPT — Portable Standalone Web Application
+# FPTester — Portable Standalone Web Application
 
 This application is **completely self-contained** and can be run on **any laptop** (Windows, macOS, or Linux) with Python 3 installed. It has **ZERO third-party pip dependencies** and **does NOT require Antigravity** or any special IDE tools.
 
@@ -9,9 +9,9 @@ This application is **completely self-contained** and can be run on **any laptop
 You can download single executable app binaries directly from GitHub Releases:
 👉 **[Download Latest Releases (Windows / macOS / Linux)](https://github.com/SUVITH63/Flying-probe-tester/releases)**
 
-- **Windows**: Download `OpenFPT-Windows-x64.exe` and double-click to run!
-- **macOS**: Download `OpenFPT-macOS-x64` and double-click to run!
-- **Linux**: Download `OpenFPT-Linux-x64` and run in terminal.
+- **Windows**: Download `FPTester-Windows-x64.exe` and double-click to run!
+- **macOS**: Download `FPTester-macOS-x64` and double-click to run!
+- **Linux**: Download `FPTester-Linux-x64` and run in terminal.
 
 ---
 

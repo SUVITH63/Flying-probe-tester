@@ -1,5 +1,5 @@
 """
-OpenFPT Main Parser CLI
+FPTester Main Parser CLI
 Parses KiCad PCB or Gerber files and outputs JSON hardware test plans.
 Usage:
     python main_parser.py --input board.kicad_pcb --output test_plan.json
@@ -14,7 +14,7 @@ from parser.test_plan_gen import TestPlanGenerator
 from parser.workspace import WorkspaceValidator
 
 def main():
-    parser = argparse.ArgumentParser(description="OpenFPT PCB Pad Coordinate Parser & Test Plan Generator")
+    parser = argparse.ArgumentParser(description="FPTester PCB Pad Coordinate Parser & Test Plan Generator")
     parser.add_argument("--input", "-i", required=True, help="Path to .kicad_pcb or .gbr file")
     parser.add_argument("--output", "-o", default="test_plan.json", help="Path to output JSON test plan")
     parser.add_argument("--job-id", type=int, default=101, help="Job ID for test execution")

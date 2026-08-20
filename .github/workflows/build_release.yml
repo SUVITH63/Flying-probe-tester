@@ -1,4 +1,4 @@
-name: Build & Release OpenFPT Executable App
+name: Build & Release FPTester Executable App
 
 on:
   push:
@@ -19,14 +19,14 @@ jobs:
       matrix:
         include:
           - os: windows-latest
-            artifact_name: OpenFPT-Windows.exe
-            asset_name: OpenFPT-Windows-x64.exe
+            artifact_name: FPTester-Windows.exe
+            asset_name: FPTester-Windows-x64.exe
           - os: macos-latest
-            artifact_name: OpenFPT-App
-            asset_name: OpenFPT-macOS-x64
+            artifact_name: FPTester-App
+            asset_name: FPTester-macOS-x64
           - os: ubuntu-latest
-            artifact_name: OpenFPT-App
-            asset_name: OpenFPT-Linux-x64
+            artifact_name: FPTester-App
+            asset_name: FPTester-Linux-x64
 
     steps:
       - name: Checkout Repository
@@ -42,7 +42,7 @@ jobs:
 
       - name: Build Standalone Executable with PyInstaller
         run: |
-          python -m PyInstaller --onefile --add-data "frontend;frontend" --name "OpenFPT-Windows" run_app.py || python -m PyInstaller --onefile --add-data "frontend:frontend" --name "OpenFPT-App" run_app.py
+          python -m PyInstaller --onefile --add-data "frontend;frontend" --name "FPTester-Windows" run_app.py || python -m PyInstaller --onefile --add-data "frontend:frontend" --name "FPTester-App" run_app.py
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
@@ -68,7 +68,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: release_assets/**/*
-          name: OpenFPT Standalone Release
+          name: FPTester Standalone Release
           draft: false
           prerelease: false
         env:

@@ -1,5 +1,5 @@
 """
-OpenFPT Production Web & REST API Server (Built-in Zero-Dependency HTTP Engine)
+FPTester Production Web & REST API Server (Built-in Zero-Dependency HTTP Engine)
 Runs natively on any laptop without requiring external pip packages.
 Provides endpoints for PCB file uploading, AI test plan generation, 2D dual-arm laptop simulation,
 and ESP32 USB hardware dispatch.
@@ -22,12 +22,12 @@ from parser.workspace import WorkspaceValidator
 from parser.serial_dispatcher import SerialDispatcher
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
-logger = logging.getLogger("OpenFPT_HTTP_Server")
+logger = logging.getLogger("FPTester_HTTP_Server")
 
 # In-Memory Session Store
 BOARD_SESSIONS: dict = {}
 
-class OpenFPTHTTPRequestHandler(BaseHTTPRequestHandler):
+class FPTesterHTTPRequestHandler(BaseHTTPRequestHandler):
     def _send_json(self, data: dict, status_code: int = 200):
         body = json.dumps(data).encode('utf-8')
         self.send_response(status_code)
@@ -62,10 +62,10 @@ class OpenFPTHTTPRequestHandler(BaseHTTPRequestHandler):
                 with open(index_path, 'r', encoding='utf-8') as f:
                     self._send_html(f.read())
             else:
-                self._send_html("<h1>OpenFPT Server Online</h1><p>Frontend index.html not found.</p>")
+                self._send_html("<h1>FPTester Server Online</h1><p>Frontend index.html not found.</p>")
 
         elif url_path == "/api/health":
-            self._send_json({"status": "online", "system": "OpenFPT HTTP Server", "version": "2.0.0"})
+            self._send_json({"status": "online", "system": "FPTester HTTP Server", "version": "2.0.0"})
 
         elif url_path == "/api/ports":
             self._send_json({"ports": SerialDispatcher.list_available_ports()})
@@ -237,8 +237,8 @@ class OpenFPTHTTPRequestHandler(BaseHTTPRequestHandler):
 
 def run_server(port: int = 8000):
     server_address = ('', port)
-    httpd = HTTPServer(server_address, OpenFPTHTTPRequestHandler)
-    logger.info(f"OpenFPT Production Server running at http://localhost:{port}")
+    httpd = HTTPServer(server_address, FPTesterHTTPRequestHandler)
+    logger.info(f"FPTester Production Server running at http://localhost:{port}")
     httpd.serve_forever()
 
 if __name__ == "__main__":

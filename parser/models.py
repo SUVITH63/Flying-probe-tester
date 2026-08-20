@@ -1,5 +1,5 @@
 """
-Data models for OpenFPT PCB elements, coordinates, nets, and test plans.
+Data models for FPTester PCB elements, coordinates, nets, and test plans.
 """
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional, Tuple, Any

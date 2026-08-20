@@ -1,5 +1,5 @@
 """
-Unit tests for OpenFPT KiCad S-Expression Parser and Test Plan Generator
+Unit tests for FPTester KiCad S-Expression Parser and Test Plan Generator
 """
 import unittest
 import os

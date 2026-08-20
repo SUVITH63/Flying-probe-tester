@@ -1,5 +1,5 @@
 """
-OpenFPT AI Test Plan Generator & Circuit Pattern Analyzer
+FPTester AI Test Plan Generator & Circuit Pattern Analyzer
 Supports Built-in Offline AI, Google Gemini API, OpenAI GPT API, and Local Ollama LLM.
 Uses Python standard library (urllib) for zero external pip dependencies.
 """
@@ -10,7 +10,7 @@ import urllib.request
 from typing import List, Dict, Any, Optional
 from .models import Board, Net, Pad, TestPair, TestJob
 
-logger = logging.getLogger("OpenFPT_AI_Planner")
+logger = logging.getLogger("FPTester_AI_Planner")
 
 class AITestPlanner:
     def __init__(self, provider: str = "built_in", api_key: Optional[str] = None, custom_url: Optional[str] = None):
