@@ -9,7 +9,7 @@ import logging
 from typing import List, Dict, Any, Optional
 from .models import Board, Net, Pad, TestPair, TestJob
 
-logger = logging.getLogger("OpenFPT_AI_Planner")
+logger = logging.getLogger("FPTester_AI_Planner")
 
 class AITestPlanner:
     def __init__(self, gemini_api_key: Optional[str] = None):

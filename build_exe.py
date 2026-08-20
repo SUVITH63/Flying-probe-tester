@@ -1,6 +1,6 @@
 """
-OpenFPT Single-Click Executable Build Script
-Packages OpenFPT Python Server and Frontend into a standalone .exe for Windows and binary for macOS/Linux.
+FPTester Single-Click Executable Build Script
+Packages FPTester Python Server and Frontend into a standalone .exe for Windows and binary for macOS/Linux.
 Usage:
     python build_exe.py
 """
@@ -10,7 +10,7 @@ import subprocess
 import shutil
 
 def build():
-    print("[*] Building OpenFPT Standalone Executable...")
+    print("[*] Building FPTester Standalone Executable...")
 
     # Ensure pyinstaller is installed
     try:
@@ -24,7 +24,6 @@ def build():
     parser_dir = os.path.join(project_dir, "parser")
 
     # PyInstaller command
-    # Windows uses ';' as pathsep for --add-data, Linux/Mac uses ':'
     pathsep = ";" if sys.platform.startswith("win") else ":"
     
     cmd = [
@@ -33,7 +32,7 @@ def build():
         "PyInstaller",
         "--noconfirm",
         "--onedir",
-        "--name=OpenFPT",
+        "--name=FPTester",
         f"--add-data={frontend_dir}{pathsep}frontend",
         f"--add-data={parser_dir}{pathsep}parser",
         "--hidden-import=parser.kicad_parser",
@@ -47,13 +46,13 @@ def build():
     print(f"[*] Running command: {' '.join(cmd)}")
     subprocess.check_call(cmd)
 
-    dist_dir = os.path.join(project_dir, "dist", "OpenFPT")
-    print(f"\n[SUCCESS] OpenFPT Build Complete!")
+    dist_dir = os.path.join(project_dir, "dist", "FPTester")
+    print(f"\n[SUCCESS] FPTester Build Complete!")
     print(f"[+] Output Directory: {dist_dir}")
     if sys.platform.startswith("win"):
-        print(f"[+] Executable: {os.path.join(dist_dir, 'OpenFPT.exe')}")
+        print(f"[+] Executable: {os.path.join(dist_dir, 'FPTester.exe')}")
     else:
-        print(f"[+] Binary: {os.path.join(dist_dir, 'OpenFPT')}")
+        print(f"[+] Binary: {os.path.join(dist_dir, 'FPTester')}")
 
 if __name__ == "__main__":
     build()

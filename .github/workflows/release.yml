@@ -30,13 +30,13 @@ jobs:
       - name: Create Zip Archive
         shell: powershell
         run: |
-          Compress-Archive -Path dist/OpenFPT/* -DestinationPath OpenFPT-Windows-x64.zip
+          Compress-Archive -Path dist/FPTester/* -DestinationPath FPTester-Windows-x64.zip
 
       - name: Upload Windows Asset
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: OpenFPT-Windows-x64.zip
+          files: FPTester-Windows-x64.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -62,12 +62,12 @@ jobs:
 
       - name: Create Zip Archive
         run: |
-          cd dist && zip -r ../OpenFPT-macOS.zip OpenFPT
+          cd dist && zip -r ../FPTester-macOS.zip FPTester
 
       - name: Upload macOS Asset
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: OpenFPT-macOS.zip
+          files: FPTester-macOS.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

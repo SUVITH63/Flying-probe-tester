@@ -7,7 +7,7 @@ import time
 import logging
 from typing import List, Dict, Any, Optional
 
-logger = logging.getLogger("OpenFPT_SerialDispatcher")
+logger = logging.getLogger("FPTester_SerialDispatcher")
 
 try:
     import serial
@@ -30,7 +30,7 @@ class SerialDispatcher:
         Lists all available USB COM ports on the system.
         """
         if not SERIAL_AVAILABLE:
-            return [{"port": "SIMULATED_COM1", "description": "Virtual OpenFPT Hardware Port (Simulation)"}]
+            return [{"port": "SIMULATED_COM1", "description": "Virtual FPTester Hardware Port (Simulation)"}]
 
         ports = []
         for p in serial.tools.list_ports.comports():

@@ -1,7 +1,7 @@
-# 🛸 OpenFPT — Automated Flying Probe PCB Tester
+# 🛸 FPTester — Automated Flying Probe PCB Tester
 
 <p align="center">
-  <img src="https://img.shields.io/badge/OpenFPT-v2.0.0-f59e0b?style=for-the-badge&logo=microchip&logoColor=black" alt="OpenFPT Version" />
+  <img src="https://img.shields.io/badge/FPTester-v2.0.0-f59e0b?style=for-the-badge&logo=microchip&logoColor=black" alt="FPTester Version" />
   <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-06b6d4?style=for-the-badge&logo=linux&logoColor=white" alt="Platforms" />
   <img src="https://img.shields.io/badge/License-MIT-10b981?style=for-the-badge" alt="License" />
   <img src="https://img.shields.io/badge/Python-3.8%2B-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python Version" />
@@ -16,19 +16,19 @@
 
 ## ⚡ One-Click Downloads
 
-Like **G-Helper**, OpenFPT is packaged as a lightweight, zero-installation standalone executable. Download and run instantly without installing Python or external dependencies!
+Like **G-Helper**, FPTester is packaged as a lightweight, zero-installation standalone executable. Download and run instantly without installing Python or external dependencies!
 
 <p align="center">
   <a href="https://github.com/SUVITH63/Flying-probe-tester/releases">
-    <img src="https://img.shields.io/badge/Download_for_Windows-OpenFPT--v2.0.0.zip-0078D4?style=for-the-badge&logo=windows&logoColor=white" height="48" alt="Download for Windows" />
+    <img src="https://img.shields.io/badge/Download_for_Windows-FPTester--v2.0.0.zip-0078D4?style=for-the-badge&logo=windows&logoColor=white" height="48" alt="Download for Windows" />
   </a>
   &nbsp;&nbsp;&nbsp;&nbsp;
   <a href="https://github.com/SUVITH63/Flying-probe-tester/releases">
-    <img src="https://img.shields.io/badge/Download_for_macOS-OpenFPT--v2.0.0.zip-000000?style=for-the-badge&logo=apple&logoColor=white" height="48" alt="Download for macOS" />
+    <img src="https://img.shields.io/badge/Download_for_macOS-FPTester--v2.0.0.zip-000000?style=for-the-badge&logo=apple&logoColor=white" height="48" alt="Download for macOS" />
   </a>
 </p>
 
-> **Quick Launch (Windows):** Simply extract the `.zip` file and double-click **`OpenFPT.exe`** (or `OpenFPT-Launcher.bat`). It will automatically start the backend server and launch your web browser at `http://localhost:8000`.
+> **Quick Launch (Windows):** Simply extract the `.zip` file and double-click **`FPTester.exe`** (or `FPTester-Launcher.bat`). It will automatically start the backend server and launch your web browser at `http://localhost:8000`.
 
 ---
 
@@ -69,7 +69,7 @@ graph TD
 
 ## 🔌 ESP32 USB JSON Protocol
 
-OpenFPT communicates with physical hardware over USB Serial (`115200 Baud`) using a lightweight JSON command protocol:
+FPTester communicates with physical hardware over USB Serial (`115200 Baud`) using a lightweight JSON command protocol:
 
 ```json
 {
@@ -126,12 +126,12 @@ To compile your own single-click `.exe` bundle using PyInstaller:
 pip install pyinstaller
 python build_exe.py
 ```
-The compiled executable will be saved in `dist/OpenFPT/OpenFPT.exe`.
+The compiled executable will be saved in `dist/FPTester/FPTester.exe`.
 
 ---
 
 ## 🤝 Project Credits & License
 
-- **Team:** Andromeda / OpenFPT Team
+- **Team:** Andromeda / FPTester Team
 - **Repository:** [SUVITH63/Flying-probe-tester](https://github.com/SUVITH63/Flying-probe-tester)
 - **License:** MIT License
