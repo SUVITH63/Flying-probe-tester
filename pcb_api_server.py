@@ -30,6 +30,11 @@ logger = logging.getLogger("FPTester_HTTP_Server")
 BOARD_SESSIONS: dict = {}
 _sessions_lock = threading.Lock()
 
+# Pre-warm parsers at import time so the very first upload request is instant
+_kicad_parser = KiCadPCBParser()
+_gerber_parser = GerberParser()
+logger.info("Parser engines pre-warmed and ready.")
+
 class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
     """Multi-threaded HTTP server — each request runs in its own thread."""
     daemon_threads = True
@@ -106,44 +111,61 @@ class FPTesterHTTPRequestHandler(BaseHTTPRequestHandler):
             content_str = post_data.decode('utf-8', errors='ignore')
             session_id = str(uuid.uuid4())[:8]
 
-            # Extract filename from query or MIME header if present
+            # Extract filename from query params
             filename = "uploaded_design.kicad_pcb"
             query = urllib.parse.urlparse(self.path).query
             query_params = urllib.parse.parse_qs(query)
             if 'filename' in query_params:
                 filename = query_params['filename'][0]
 
-            # Strip multi-part form-data headers if present
+            # Strip multipart form-data boundary headers if present
+            if '\r\n\r\n' in content_str:
+                content_str = content_str.split('\r\n\r\n', 1)[-1]
+            if '\n\n' in content_str and content_str.startswith('--'):
+                content_str = content_str.split('\n\n', 1)[-1]
+
+            # Extract S-expression content if embedded in multipart noise
             if '(kicad_pcb' in content_str:
                 start_idx = content_str.find('(kicad_pcb')
                 end_idx = content_str.rfind(')')
                 if start_idx != -1 and end_idx != -1:
                     content_str = content_str[start_idx:end_idx + 1]
 
+            fname_lower = filename.lower().strip()
+            # Determine file type from extension and content signature
+            is_kicad = (fname_lower.endswith('.kicad_pcb') or
+                        fname_lower.endswith('.kicad') or
+                        '(kicad_pcb' in content_str[:200])
+            is_gerber = (fname_lower.endswith('.gbr') or
+                         fname_lower.endswith('.ger') or
+                         fname_lower.endswith('.gtl') or
+                         fname_lower.endswith('.gbl') or
+                         fname_lower.endswith('.gts') or
+                         fname_lower.endswith('.gbs') or
+                         fname_lower.endswith('.gko') or
+                         fname_lower.endswith('.drl') or
+                         fname_lower.endswith('.excellon') or
+                         fname_lower.endswith('.xln') or
+                         content_str.lstrip()[:3] in ('%TF', '%FS', 'G04') or
+                         content_str.lstrip().startswith('%'))
+
             try:
-                fname_lower = filename.lower()
-                if fname_lower.endswith('.kicad_pcb') or '(kicad_pcb' in content_str:
+                if is_kicad:
                     try:
-                        parser = KiCadPCBParser()
-                        board = parser.parse_string(content_str, board_name=filename)
+                        board = _kicad_parser.parse_string(content_str, board_name=filename)
                     except Exception as kicad_err:
-                        # Fallback to Gerber parser if KiCad parsing fails
-                        try:
-                            parser = GerberParser()
-                            board = parser.parse_string(content_str, board_name=filename)
-                        except Exception:
-                            raise kicad_err
-                else:
+                        board = _gerber_parser.parse_string(content_str, board_name=filename)
+                elif is_gerber:
                     try:
-                        parser = GerberParser()
-                        board = parser.parse_string(content_str, board_name=filename)
-                    except Exception as gerber_err:
-                        # Fallback to KiCad parser if Gerber parsing fails
-                        try:
-                            parser = KiCadPCBParser()
-                            board = parser.parse_string(content_str, board_name=filename)
-                        except Exception:
-                            raise gerber_err
+                        board = _gerber_parser.parse_string(content_str, board_name=filename)
+                    except Exception:
+                        board = _kicad_parser.parse_string(content_str, board_name=filename)
+                else:
+                    # Auto-detect: try KiCad first then Gerber
+                    try:
+                        board = _kicad_parser.parse_string(content_str, board_name=filename)
+                    except Exception:
+                        board = _gerber_parser.parse_string(content_str, board_name=filename)
 
                 BOARD_SESSIONS[session_id] = {
                     "board_id": session_id,

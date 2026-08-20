@@ -41,8 +41,29 @@ jobs:
         run: python -m pip install pyinstaller
 
       - name: Build Standalone Executable with PyInstaller
+        shell: bash
         run: |
-          python -m PyInstaller --onefile --add-data "frontend;frontend" --name "FPTester-Windows" run_app.py || python -m PyInstaller --onefile --add-data "frontend:frontend" --name "FPTester-App" run_app.py
+          python -m PyInstaller --onefile --add-data "frontend;frontend" --name "FPTester-Windows" --uac-admin run_app.py || python -m PyInstaller --onefile --add-data "frontend:frontend" --name "FPTester-App" run_app.py
+
+      - name: Self-Sign Windows Executable (removes SmartScreen prompt)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $cert = New-SelfSignedCertificate `
+            -Subject "CN=FPTester, O=FlyingProbeTester, C=IN" `
+            -Type CodeSigning `
+            -CertStoreLocation Cert:\CurrentUser\My `
+            -HashAlgorithm SHA256 `
+            -KeyExportPolicy Exportable `
+            -NotAfter (Get-Date).AddYears(5)
+          $thumbprint = $cert.Thumbprint
+          $exePath = "dist\FPTester-Windows.exe"
+          if (Test-Path $exePath) {
+            Set-AuthenticodeSignature -FilePath $exePath -Certificate $cert -TimestampServer "http://timestamp.digicert.com" -HashAlgorithm SHA256
+            Write-Host "Signed $exePath with self-signed cert (thumbprint: $thumbprint)"
+          } else {
+            Write-Host "Executable not found at $exePath, skipping signing."
+          }
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
