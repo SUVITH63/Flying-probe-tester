@@ -519,7 +519,7 @@
                     }
 
                     log(`Test #${step.test_id} (${step.net}): ${step.pad_a.ref} -> ${step.pad_b.ref} = ${step.measured_voltage}V (${step.verdict})`);
-                    await new Promise(r => setTimeout(r, 600));
+                    await new Promise(r => setTimeout(r, 20));
                 }
                 log('Dual-arm probing sequence complete! All nets verified.');
             } catch (err) {

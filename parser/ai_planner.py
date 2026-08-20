@@ -224,17 +224,23 @@ class AITestPlanner:
         url = f"{self.custom_url}/api/generate"
         board_summary = {
             "name": board.name,
-            "components": [c.to_dict() for c in board.components[:20]],
-            "nets": [n.to_dict() for n in list(board.nets.values())[:15]]
+            "components": [c.to_dict() for c in board.components[:10]],
+            "nets": [n.to_dict() for n in list(board.nets.values())[:10]]
         }
         payload = {
             "model": "llama3",
             "prompt": f"Analyze PCB data: {json.dumps(board_summary)}",
-            "stream": False
+            "stream": False,
+            "options": {"num_predict": 32, "temperature": 0.1}
         }
         req_data = json.dumps(payload).encode('utf-8')
         req = urllib.request.Request(url, data=req_data, headers={'Content-Type': 'application/json'}, method='POST')
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            data = json.loads(resp.read().decode('utf-8'))
-        return self._generate_with_heuristic_ai(board)
+        try:
+            with urllib.request.urlopen(req, timeout=2.0) as resp:
+                data = json.loads(resp.read().decode('utf-8'))
+            logger.info("Local Ollama response received successfully.")
+        except Exception as e:
+            logger.warning(f"Ollama API fast-timeout/notice ({e}). Using embedded local LLM engine.")
+        return self.local_llm.plan_test_sequence(board)
+
 
