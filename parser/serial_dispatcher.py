@@ -66,9 +66,7 @@ class SerialDispatcher:
         msg_str = json.dumps(cmd_dict) + "\n"
 
         if not self.conn or not SERIAL_AVAILABLE or self.port == "SIMULATED_COM1":
-            # Simulated Hardware Execution
-            time.sleep(0.15)  # Simulate 150ms arm move & measurement time
-            # Compute simulated ADC reading based on expected voltage in command meta
+            # Simulated Hardware Execution (Instant response for fast simulation)
             expected_min = cmd_dict.get("meta", {}).get("expected_min_v", 3.0)
             sim_voltage = round(expected_min + 0.05, 3)
             sim_adc = int((sim_voltage / 3.3) * 4095)

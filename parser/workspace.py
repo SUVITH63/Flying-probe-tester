@@ -1,6 +1,7 @@
 """
 Workspace Validator & Coordinate Frame Transformer
 Computes local arm reference frames and checks reachability limits for 5-bar linkage arms.
+Enforces strict anti-crossing & anti-touching clearance rules between Arm 0 (Top) and Arm 1 (Bottom).
 """
 import math
 from typing import Tuple, Dict, Any
@@ -63,21 +64,23 @@ class WorkspaceValidator:
     def validate_pad_pair(self, pad_a: Pad, pad_b: Pad) -> Tuple[bool, str]:
         """
         Validates if Pad A can be probed by Arm 0 and Pad B can be probed by Arm 1.
-        Enforces anti-crossing collision rules so Arm 0 (Top) and Arm 1 (Bottom) never cross paths.
+        Enforces anti-crossing & anti-touching collision rules so Arm 0 (Top) and Arm 1 (Bottom) never cross or touch.
         """
-        # Anti-Crossing Check: Arm 0 approaches from Top (smaller Y), Arm 1 approaches from Bottom (larger Y)
-        # If pad_a is further down than pad_b, swap them if needed or enforce anti-crossing order
-        arm0_ok = self.is_reachable(0, pad_a.x, pad_a.y)
-        if not arm0_ok:
-            return False, f"Pad A ({pad_a.pad_id} at {pad_a.x:.1f},{pad_a.y:.1f}) is out of reach for Arm 0."
+        # Ensure Arm 0 (Top) targets upper pad (smaller Y), Arm 1 (Bottom) targets lower pad (larger Y)
+        top_pad = pad_a if pad_a.y <= pad_b.y else pad_b
+        bot_pad = pad_b if pad_a.y <= pad_b.y else pad_a
 
-        arm1_ok = self.is_reachable(1, pad_b.x, pad_b.y)
+        arm0_ok = self.is_reachable(0, top_pad.x, top_pad.y)
+        if not arm0_ok:
+            return False, f"Upper Pad ({top_pad.pad_id} at {top_pad.x:.1f},{top_pad.y:.1f}) is out of reach for Arm 0."
+
+        arm1_ok = self.is_reachable(1, bot_pad.x, bot_pad.y)
         if not arm1_ok:
-            return False, f"Pad B ({pad_b.pad_id} at {pad_b.x:.1f},{pad_b.y:.1f}) is out of reach for Arm 1."
+            return False, f"Lower Pad ({bot_pad.pad_id} at {bot_pad.x:.1f},{bot_pad.y:.1f}) is out of reach for Arm 1."
 
         # Distance & Anti-Collision Tip Clearance Check (Minimum 1.5mm separation)
-        dist = math.hypot(pad_a.x - pad_b.x, pad_a.y - pad_b.y)
+        dist = math.hypot(top_pad.x - bot_pad.x, top_pad.y - bot_pad.y)
         if dist < 1.5:
-            return False, f"Pad A and Pad B are too close ({dist:.2f}mm < 1.5mm safety threshold)."
+            return False, f"Pads are too close ({dist:.2f}mm < 1.5mm safety threshold)."
 
         return True, "Reachable"
