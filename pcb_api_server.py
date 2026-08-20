@@ -113,12 +113,29 @@ class FPTesterHTTPRequestHandler(BaseHTTPRequestHandler):
                     content_str = content_str[start_idx:end_idx + 1]
 
             try:
-                if 'kicad_pcb' in content_str:
-                    parser = KiCadPCBParser()
-                    board = parser.parse_string(content_str, board_name=filename)
+                fname_lower = filename.lower()
+                if fname_lower.endswith('.kicad_pcb') or '(kicad_pcb' in content_str:
+                    try:
+                        parser = KiCadPCBParser()
+                        board = parser.parse_string(content_str, board_name=filename)
+                    except Exception as kicad_err:
+                        # Fallback to Gerber parser if KiCad parsing fails
+                        try:
+                            parser = GerberParser()
+                            board = parser.parse_string(content_str, board_name=filename)
+                        except Exception:
+                            raise kicad_err
                 else:
-                    parser = GerberParser()
-                    board = parser.parse_string(content_str, board_name=filename)
+                    try:
+                        parser = GerberParser()
+                        board = parser.parse_string(content_str, board_name=filename)
+                    except Exception as gerber_err:
+                        # Fallback to KiCad parser if Gerber parsing fails
+                        try:
+                            parser = KiCadPCBParser()
+                            board = parser.parse_string(content_str, board_name=filename)
+                        except Exception:
+                            raise gerber_err
 
                 BOARD_SESSIONS[session_id] = {
                     "board_id": session_id,

@@ -2,6 +2,9 @@
 *.zip
 *.exe
 llm/models/
+build/
+dist/
 __pycache__/
 *.pyc
+._*
 .DS_Store
