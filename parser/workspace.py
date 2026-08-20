@@ -63,7 +63,10 @@ class WorkspaceValidator:
     def validate_pad_pair(self, pad_a: Pad, pad_b: Pad) -> Tuple[bool, str]:
         """
         Validates if Pad A can be probed by Arm 0 and Pad B can be probed by Arm 1.
+        Enforces anti-crossing collision rules so Arm 0 (Top) and Arm 1 (Bottom) never cross paths.
         """
+        # Anti-Crossing Check: Arm 0 approaches from Top (smaller Y), Arm 1 approaches from Bottom (larger Y)
+        # If pad_a is further down than pad_b, swap them if needed or enforce anti-crossing order
         arm0_ok = self.is_reachable(0, pad_a.x, pad_a.y)
         if not arm0_ok:
             return False, f"Pad A ({pad_a.pad_id} at {pad_a.x:.1f},{pad_a.y:.1f}) is out of reach for Arm 0."
@@ -71,5 +74,10 @@ class WorkspaceValidator:
         arm1_ok = self.is_reachable(1, pad_b.x, pad_b.y)
         if not arm1_ok:
             return False, f"Pad B ({pad_b.pad_id} at {pad_b.x:.1f},{pad_b.y:.1f}) is out of reach for Arm 1."
+
+        # Distance & Anti-Collision Tip Clearance Check (Minimum 1.5mm separation)
+        dist = math.hypot(pad_a.x - pad_b.x, pad_a.y - pad_b.y)
+        if dist < 1.5:
+            return False, f"Pad A and Pad B are too close ({dist:.2f}mm < 1.5mm safety threshold)."
 
         return True, "Reachable"

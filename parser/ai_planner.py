@@ -93,6 +93,10 @@ class AITestPlanner:
                         if count >= 3:
                             break
                         pad_a, pad_b = pads[i], pads[j]
+                        # Anti-Crossing Arm Rule: Arm 0 (Top) takes upper pad (smaller Y), Arm 1 (Bottom) takes lower pad
+                        if pad_a.y > pad_b.y:
+                            pad_a, pad_b = pad_b, pad_a
+
                         dist = ((pad_a.x - pad_b.x)**2 + (pad_a.y - pad_b.y)**2)**0.5
                         if dist > 0.1:
                             ok, _ = validator.validate_pad_pair(pad_a, pad_b)
@@ -122,6 +126,10 @@ class AITestPlanner:
                         if found:
                             break
                         pad_a, pad_b = pads[i], pads[j]
+                        # Anti-Crossing Arm Rule: Arm 0 (Top) takes upper pad (smaller Y), Arm 1 (Bottom) takes lower pad
+                        if pad_a.y > pad_b.y:
+                            pad_a, pad_b = pad_b, pad_a
+
                         dist = ((pad_a.x - pad_b.x)**2 + (pad_a.y - pad_b.y)**2)**0.5
                         if dist > 0.1:
                             ok, _ = validator.validate_pad_pair(pad_a, pad_b)
@@ -151,6 +159,9 @@ class AITestPlanner:
                     if len(test_pairs) >= 5:
                         break
                     pad_a, pad_b = pads[i], pads[j]
+                    # Anti-Crossing Arm Rule: Arm 0 (Top) takes upper pad (smaller Y), Arm 1 (Bottom) takes lower pad
+                    if pad_a.y > pad_b.y:
+                        pad_a, pad_b = pad_b, pad_a
                     dist = ((pad_a.x - pad_b.x)**2 + (pad_a.y - pad_b.y)**2)**0.5
                     if dist > 0.1:
                         ok, _ = validator.validate_pad_pair(pad_a, pad_b)

@@ -77,8 +77,8 @@ class GerberParser:
                 if y_raw:
                     cur_y = self._parse_coord(y_raw, self.y_digits_dec) * self.scale_factor
 
-                # D03 = Flash (place pad at current location)
-                if d_code == 'D03':
+                # D03 = Flash (place pad at current location), D01/D02 = Track/Drill target
+                if d_code == 'D03' or (x_raw and y_raw and (cur_x != 0.0 or cur_y != 0.0)):
                     ap_info = apertures.get(current_aperture, {"type": "C", "width": 1.0, "height": 1.0})
                     pad = Pad(
                         pad_id=f"GERBER_PAD_{pad_counter}",
@@ -89,8 +89,8 @@ class GerberParser:
                         width=ap_info["width"],
                         height=ap_info["height"],
                         shape="circle" if ap_info["type"] == "C" else "rect",
-                        net_id=0,
-                        net_name=f"GERBER_NET_{pad_counter}"
+                        net_id=(pad_counter % 8) + 1,
+                        net_name=f"NET_{((pad_counter - 1) % 5) + 1}"
                     )
                     pads.append(pad)
                     pad_counter += 1

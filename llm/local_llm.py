@@ -90,6 +90,10 @@ class LocalEmbeddedLLM:
                 next_idx = (i + 1) % len(pads)
                 pad_a, pad_b = pads[i], pads[next_idx]
 
+                # Anti-Crossing Arm Rule: Arm 0 (Top) takes upper pad (smaller Y), Arm 1 (Bottom) takes lower pad
+                if pad_a.y > pad_b.y:
+                    pad_a, pad_b = pad_b, pad_a
+
                 combo_key = tuple(sorted([pad_a.pad_id, pad_b.pad_id]))
                 if combo_key in tested_pad_combos:
                     continue
@@ -118,6 +122,10 @@ class LocalEmbeddedLLM:
                     pad_a = comp.pads[i]
                     pad_b = comp.pads[i + 1]
 
+                    # Anti-Crossing Arm Rule: Arm 0 (Top) takes upper pad (smaller Y), Arm 1 (Bottom) takes lower pad
+                    if pad_a.y > pad_b.y:
+                        pad_a, pad_b = pad_b, pad_a
+
                     combo_key = tuple(sorted([pad_a.pad_id, pad_b.pad_id]))
                     if combo_key in tested_pad_combos:
                         continue
@@ -145,6 +153,10 @@ class LocalEmbeddedLLM:
             for j in range(i + 1, min(i + 4, len(pads_list))):
                 pad_a, pad_b = pads_list[i], pads_list[j]
                 if pad_a.net_name != pad_b.net_name and pad_a.net_name and pad_b.net_name:
+                    # Anti-Crossing Arm Rule: Arm 0 (Top) takes upper pad (smaller Y), Arm 1 (Bottom) takes lower pad
+                    if pad_a.y > pad_b.y:
+                        pad_a, pad_b = pad_b, pad_a
+
                     combo_key = tuple(sorted([pad_a.pad_id, pad_b.pad_id]))
                     if combo_key in tested_pad_combos:
                         continue

@@ -611,9 +611,22 @@
             ctx.arc(cx, cy, 4, 0, Math.PI * 2);
             ctx.fill();
 
-            // Target Coordinates
-            let p0 = padA ? { x: padA.x, y: padA.y } : arm0Target;
-            let p1 = padB ? { x: padB.x, y: padB.y } : arm1Target;
+            // Target Coordinates with Anti-Crossing Protection
+            let p0 = padA ? { x: padA.x, y: padA.y } : { ...arm0Target };
+            let p1 = padB ? { x: padB.x, y: padB.y } : { ...arm1Target };
+
+            // Anti-Crossing Protection Rule: Arm 0 (Top) MUST remain above Arm 1 (Bottom)
+            if (p0.y > p1.y) {
+                const temp = p0;
+                p0 = p1;
+                p1 = temp;
+            }
+
+            // Tip Safety Clearance (prevent collision when probing very close pads)
+            if (Math.hypot(p0.x - p1.x, p0.y - p1.y) < 1.5) {
+                p0.x -= 1.0;
+                p1.x += 1.0;
+            }
 
             // Map PCB mm coordinates to canvas pixel coordinates
             const target0Canvas = {
