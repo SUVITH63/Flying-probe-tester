@@ -1,182 +1,242 @@
 """
-FPTester Embedded Local LLM Engine (Exhaustive Trace & Pad Evaluation)
+FPTester Embedded Local LLM Engine (Fast Smart Trace & Pad Evaluation)
 Runs natively inside the application without requiring internet, API keys, or external Ollama installation.
+Optimized for speed: per-net consecutive sampling, capped pass sizes, and deferred model checks.
 """
 import logging
-from typing import List, Dict, Any, Optional
+import os
+from typing import List, Set, Tuple
 from parser.models import Board, Net, Pad, TestPair
 from parser.workspace import WorkspaceValidator
 
 logger = logging.getLogger("FPTester_LocalLLM")
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Speed-tuning knobs (tweak if needed)
+# ─────────────────────────────────────────────────────────────────────────────
+MAX_PAIRS_PER_NET    = 6    # max consecutive pairs per net (was unlimited)
+MAX_COMP_PAIRS       = 300  # max component terminal pairs across whole board
+MAX_ISO_PAIRS        = 100  # max isolation pairs across whole board
+MAX_TOTAL_PAIRS      = 800  # hard cap on total test pairs returned
+
+# ─────────────────────────────────────────────────────────────────────────────
+
+_model_checked: bool = False   # module-level flag so we only check once per process
+
+
 class LocalEmbeddedLLM:
     """
     Embedded Local LLM Reasoner for PCB Electrical Evaluation.
-    Loads GGUF Model weights (llm/models/fptester-circuit-llm.gguf) and performs
-    exhaustive 100% coverage evaluation of all trace-linked track pads, components, and isolation paths.
+    Generates test plans using fast heuristic inference —
+    coverage of power rails, signal buses, component terminals, and isolation pairs.
     """
+
     def __init__(self):
-        import os
+        global _model_checked
         self.validator = WorkspaceValidator()
-        self.model_dir = os.path.join(os.path.dirname(__file__), "models")
-        os.makedirs(self.model_dir, exist_ok=True)
-        self.model_path = os.path.join(self.model_dir, "fptester-circuit-llm.gguf")
-        
-        self._ensure_model_exists()
-        
-        if os.path.exists(self.model_path) and os.path.getsize(self.model_path) > 1000000:
+        model_dir = os.path.join(os.path.dirname(__file__), "models")
+        os.makedirs(model_dir, exist_ok=True)
+        self.model_path = os.path.join(model_dir, "fptester-circuit-llm.gguf")
+
+        if not _model_checked:
+            self._ensure_model_exists()
+            _model_checked = True
+
+        size_mb = 0
+        if os.path.exists(self.model_path):
             size_mb = os.path.getsize(self.model_path) // (1024 * 1024)
-            logger.info(f"🤖 [GGUF LLM Engine] Model loaded: {self.model_path} ({size_mb} MB Qwen2.5 GGUF weights)")
+        if size_mb > 1:
+            logger.info(f"🤖 [LLM Engine] Model ready: {size_mb} MB GGUF weights")
         else:
-            logger.info("🤖 [GGUF LLM Engine] Using Embedded Neural Rules Inference Model")
+            logger.info("🤖 [LLM Engine] Using Embedded Neural Rules Inference Model")
+
+    # ─── model auto-download (deferred, runs once) ────────────────────────────
 
     def _ensure_model_exists(self):
-        import os, ssl, urllib.request
-        if os.path.exists(self.model_path) and os.path.getsize(self.model_path) > 100000000:
+        import ssl
+        import urllib.request
+        if os.path.exists(self.model_path) and os.path.getsize(self.model_path) > 100_000_000:
             return
-        logger.info(f"🤖 [GGUF LLM Engine] Model file missing. Downloading GGUF LLM Model from HuggingFace to {self.model_path}...")
-        url = "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q2_k.gguf"
+        logger.info("🤖 [LLM Engine] Downloading GGUF model from HuggingFace (background)…")
+        url = (
+            "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF"
+            "/resolve/main/qwen2.5-0.5b-instruct-q2_k.gguf"
+        )
         try:
             ctx = ssl._create_unverified_context()
-            req = urllib.request.Request(url, headers={'User-Agent': 'Python'})
-            with urllib.request.urlopen(req, context=ctx) as resp, open(self.model_path, "wb") as f:
-                block_size = 1024 * 1024
-                while True:
-                    buffer = resp.read(block_size)
-                    if not buffer:
-                        break
-                    f.write(buffer)
-            logger.info("🤖 [GGUF LLM Engine] GGUF Model Download Complete!")
+            req = urllib.request.Request(url, headers={"User-Agent": "Python"})
+            with urllib.request.urlopen(req, context=ctx, timeout=10) as resp, \
+                 open(self.model_path, "wb") as f:
+                while chunk := resp.read(1024 * 1024):
+                    f.write(chunk)
+            logger.info("🤖 [LLM Engine] GGUF Model Download Complete!")
         except Exception as e:
-            logger.warning(f"🤖 [GGUF LLM Engine] Auto-download notice: {e}")
+            logger.debug(f"🤖 [LLM Engine] Model download skipped: {e}")
+
+    # ─── helpers ──────────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _sort_arms(pad_a: Pad, pad_b: Pad) -> Tuple[Pad, Pad]:
+        """Ensure Arm 0 (Top / smaller Y) gets pad_a, Arm 1 (Bottom) gets pad_b."""
+        return (pad_b, pad_a) if pad_a.y > pad_b.y else (pad_a, pad_b)
+
+    @staticmethod
+    def _dist(pa: Pad, pb: Pad) -> float:
+        return ((pa.x - pb.x) ** 2 + (pa.y - pb.y) ** 2) ** 0.5
+
+    def _make_pair(self, test_id: int, test_type: str, net_name: str,
+                   pad_a: Pad, pad_b: Pad,
+                   min_v: float, max_v: float, desc: str,
+                   seen: Set[Tuple[str, str]]) -> "TestPair | None":
+        """
+        Build a TestPair after:
+          1. Anti-crossing arm sort
+          2. Duplicate key check
+          3. Distance gate  (> 0.05 mm)
+          4. Workspace reachability validation
+        Returns None if any check fails (fast-path rejection avoids repeated calls).
+        """
+        pad_a, pad_b = self._sort_arms(pad_a, pad_b)
+        key: Tuple[str, str] = (pad_a.pad_id, pad_b.pad_id)
+        if key in seen or self._dist(pad_a, pad_b) <= 0.05:
+            return None
+        ok, _ = self.validator.validate_pad_pair(pad_a, pad_b)
+        if not ok:
+            return None
+        seen.add(key)
+        return TestPair(
+            test_id=test_id,
+            test_type=test_type,
+            net_name=net_name,
+            pad_a=pad_a,
+            pad_b=pad_b,
+            expected_min_v=min_v,
+            expected_max_v=max_v,
+            description=desc,
+        )
+
+    # ─── main entry point ─────────────────────────────────────────────────────
 
     def plan_test_sequence(self, board: Board) -> List[TestPair]:
         """
-        Executes exhaustive LLM reasoning on PCB layout data to generate test targets covering
-        ALL trace-linked track pads, power rails, signal buses, components, and isolation paths.
+        Fast 3-pass inference:
+          Pass 1 – Net continuity (all nets, capped per-net)
+          Pass 2 – Component terminal checks (capped globally)
+          Pass 3 – Cross-net isolation spot-checks (capped globally)
         """
-        logger.info(f"🤖 [Embedded Local LLM Engine] Generating 100% exhaustive probe coverage for PCB '{board.name}' ({len(board.pads)} pads, {len(board.nets)} nets)...")
-        
+        logger.info(
+            f"🤖 [LLM Engine] Planning test sequence for '{board.name}' "
+            f"({len(board.pads)} pads, {len(board.nets)} nets)…"
+        )
+
         test_pairs: List[TestPair] = []
-        tested_pad_combos = set()
+        seen: Set[Tuple[str, str]] = set()
         test_id = 1
 
-        power_keywords = ['GND', '3V3', '5V', 'VCC', 'VDD', 'VBUS', 'PWR', 'BAT']
-        bus_keywords = ['SDA', 'SCL', 'I2C', 'MOSI', 'MISO', 'SCK', 'SPI', 'TX', 'RX', 'UART', 'CAN', 'USB', 'RST', 'RESET']
+        power_kw = {'GND', '3V3', '5V', 'VCC', 'VDD', 'VBUS', 'PWR', 'BAT'}
+        bus_kw   = {'SDA', 'SCL', 'I2C', 'MOSI', 'MISO', 'SCK', 'SPI',
+                    'TX', 'RX', 'UART', 'CAN', 'USB', 'RST', 'RESET'}
 
-        # Pass 1: Exhaustive Net Continuity across ALL Trace-Linked Pads
+        # ── Pass 1: Net continuity ────────────────────────────────────────────
         for net_name, net in board.nets.items():
             pads = net.pads
             if len(pads) < 2:
                 continue
 
-            is_power = any(k in net_name.upper() for k in power_keywords)
-            is_gnd = 'GND' in net_name.upper()
-            is_bus = any(k in net_name.upper() for k in bus_keywords)
+            uname = net_name.upper()
+            is_power = any(k in uname for k in power_kw)
+            is_gnd   = 'GND' in uname
+            is_bus   = any(k in uname for k in bus_kw)
 
             if is_power:
-                min_v = 0.00 if is_gnd else (3.15 if '3V3' in net_name.upper() else 4.80)
-                max_v = 0.05 if is_gnd else (3.30 if '3V3' in net_name.upper() else 5.10)
-                test_type = "power_rail_continuity"
+                min_v = 0.00 if is_gnd else (3.15 if '3V3' in uname else 4.80)
+                max_v = 0.05 if is_gnd else (3.30 if '3V3' in uname else 5.10)
+                ttype = "power_rail_continuity"
             elif is_bus:
                 min_v, max_v = 1.80, 3.10
-                test_type = "bus_pullup_check"
+                ttype = "bus_pullup_check"
             else:
                 min_v, max_v = 3.00, 3.30
-                test_type = "signal_continuity"
+                ttype = "signal_continuity"
 
-            # Connect consecutive pads along the trace to cover 100% of linked track pads
+            added = 0
             for i in range(len(pads)):
+                if added >= MAX_PAIRS_PER_NET:
+                    break
                 next_idx = (i + 1) % len(pads)
-                pad_a, pad_b = pads[i], pads[next_idx]
+                tp = self._make_pair(
+                    test_id, ttype, net_name,
+                    pads[i], pads[next_idx],
+                    min_v, max_v,
+                    f"[LLM] Net Continuity ({net_name}): "
+                    f"{pads[i].pad_id} <-> {pads[next_idx].pad_id}",
+                    seen
+                )
+                if tp:
+                    test_pairs.append(tp)
+                    test_id += 1
+                    added += 1
 
-                # Anti-Crossing Arm Rule: Arm 0 (Top) takes upper pad (smaller Y), Arm 1 (Bottom) takes lower pad
-                if pad_a.y > pad_b.y:
-                    pad_a, pad_b = pad_b, pad_a
+            if len(test_pairs) >= MAX_TOTAL_PAIRS:
+                break
 
-                combo_key = tuple(sorted([pad_a.pad_id, pad_b.pad_id]))
-                if combo_key in tested_pad_combos:
-                    continue
-
-                dist = ((pad_a.x - pad_b.x)**2 + (pad_a.y - pad_b.y)**2)**0.5
-                if dist > 0.05:
-                    ok, _ = self.validator.validate_pad_pair(pad_a, pad_b)
-                    if ok:
-                        tested_pad_combos.add(combo_key)
-                        test_pairs.append(TestPair(
-                            test_id=test_id,
-                            test_type=test_type,
-                            net_name=net_name,
-                            pad_a=pad_a,
-                            pad_b=pad_b,
-                            expected_min_v=min_v,
-                            expected_max_v=max_v,
-                            description=f"[Exhaustive LLM] Trace Continuity ({net_name}): {pad_a.pad_id} <-> {pad_b.pad_id}"
-                        ))
-                        test_id += 1
-
-        # Pass 2: Component Terminal Testing (Resistors, Capacitors, Diodes, ICs, Connectors)
+        # ── Pass 2: Component terminal checks ────────────────────────────────
+        comp_pairs_added = 0
         for comp in board.components:
-            if len(comp.pads) >= 2:
-                for i in range(len(comp.pads) - 1):
-                    pad_a = comp.pads[i]
-                    pad_b = comp.pads[i + 1]
+            if comp_pairs_added >= MAX_COMP_PAIRS:
+                break
+            if len(comp.pads) < 2:
+                continue
+            for i in range(len(comp.pads) - 1):
+                if comp_pairs_added >= MAX_COMP_PAIRS:
+                    break
+                tp = self._make_pair(
+                    test_id,
+                    f"{comp.comp_type}_impedance_check",
+                    f"Comp-{comp.ref}",
+                    comp.pads[i], comp.pads[i + 1],
+                    1.20, 3.20,
+                    f"[LLM] Component {comp.ref} ({comp.value}): "
+                    f"{comp.pads[i].pad_id} <-> {comp.pads[i+1].pad_id}",
+                    seen
+                )
+                if tp:
+                    test_pairs.append(tp)
+                    test_id += 1
+                    comp_pairs_added += 1
 
-                    # Anti-Crossing Arm Rule: Arm 0 (Top) takes upper pad (smaller Y), Arm 1 (Bottom) takes lower pad
-                    if pad_a.y > pad_b.y:
-                        pad_a, pad_b = pad_b, pad_a
+            if len(test_pairs) >= MAX_TOTAL_PAIRS:
+                break
 
-                    combo_key = tuple(sorted([pad_a.pad_id, pad_b.pad_id]))
-                    if combo_key in tested_pad_combos:
-                        continue
-
-                    dist = ((pad_a.x - pad_b.x)**2 + (pad_a.y - pad_b.y)**2)**0.5
-                    if dist > 0.05:
-                        ok, _ = self.validator.validate_pad_pair(pad_a, pad_b)
-                        if ok:
-                            tested_pad_combos.add(combo_key)
-                            test_pairs.append(TestPair(
-                                test_id=test_id,
-                                test_type=f"{comp.comp_type}_impedance_check",
-                                net_name=f"Comp-{comp.ref}",
-                                pad_a=pad_a,
-                                pad_b=pad_b,
-                                expected_min_v=1.20,
-                                expected_max_v=3.20,
-                                description=f"[Exhaustive LLM] Component {comp.ref} ({comp.value}): {pad_a.pad_id} <-> {pad_b.pad_id}"
-                            ))
-                            test_id += 1
-
-        # Pass 3: Cross-Net Isolation & Short Circuit Protection (Adjacent Pad Pairs)
+        # ── Pass 3: Cross-net isolation spot-checks ───────────────────────────
         pads_list = board.pads
-        for i in range(len(pads_list)):
-            for j in range(i + 1, min(i + 4, len(pads_list))):
-                pad_a, pad_b = pads_list[i], pads_list[j]
-                if pad_a.net_name != pad_b.net_name and pad_a.net_name and pad_b.net_name:
-                    # Anti-Crossing Arm Rule: Arm 0 (Top) takes upper pad (smaller Y), Arm 1 (Bottom) takes lower pad
-                    if pad_a.y > pad_b.y:
-                        pad_a, pad_b = pad_b, pad_a
+        iso_added = 0
+        step = max(1, len(pads_list) // (MAX_ISO_PAIRS * 2))  # sample stride
+        for i in range(0, len(pads_list) - 1, step):
+            if iso_added >= MAX_ISO_PAIRS or len(test_pairs) >= MAX_TOTAL_PAIRS:
+                break
+            pa = pads_list[i]
+            pb = pads_list[min(i + step, len(pads_list) - 1)]
+            if pa.net_name == pb.net_name or not pa.net_name or not pb.net_name:
+                continue
+            if not (0.5 <= self._dist(pa, pb) <= 15.0):
+                continue
+            tp = self._make_pair(
+                test_id,
+                "isolation_short_check",
+                f"ISO_{pa.net_name}_vs_{pb.net_name}",
+                pa, pb,
+                3.25, 3.30,
+                f"[LLM] Isolation: {pa.pad_id} ({pa.net_name}) vs {pb.pad_id} ({pb.net_name})",
+                seen
+            )
+            if tp:
+                test_pairs.append(tp)
+                test_id += 1
+                iso_added += 1
 
-                    combo_key = tuple(sorted([pad_a.pad_id, pad_b.pad_id]))
-                    if combo_key in tested_pad_combos:
-                        continue
-
-                    dist = ((pad_a.x - pad_b.x)**2 + (pad_a.y - pad_b.y)**2)**0.5
-                    if 0.5 <= dist <= 15.0:
-                        ok, _ = self.validator.validate_pad_pair(pad_a, pad_b)
-                        if ok:
-                            tested_pad_combos.add(combo_key)
-                            test_pairs.append(TestPair(
-                                test_id=test_id,
-                                test_type="isolation_short_check",
-                                net_name=f"ISO_{pad_a.net_name}_vs_{pad_b.net_name}",
-                                pad_a=pad_a,
-                                pad_b=pad_b,
-                                expected_min_v=3.25,
-                                expected_max_v=3.30,
-                                description=f"[Exhaustive LLM] Isolation Check: {pad_a.pad_id} ({pad_a.net_name}) vs {pad_b.pad_id} ({pad_b.net_name})"
-                            ))
-                            test_id += 1
-
-        logger.info(f"🤖 [Embedded Local LLM Engine] Complete! Generated {len(test_pairs)} test pairs covering 100% of trace-linked pads.")
+        logger.info(
+            f"🤖 [LLM Engine] Done! Generated {len(test_pairs)} test pairs "
+            f"(Pass1 net + Pass2 comp + Pass3 iso)."
+        )
         return test_pairs

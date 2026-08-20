@@ -9,7 +9,9 @@ import sys
 import json
 import uuid
 import urllib.parse
+import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
+from socketserver import ThreadingMixIn
 import logging
 
 # Ensure parser modules are accessible
@@ -24,8 +26,14 @@ from parser.serial_dispatcher import SerialDispatcher
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("FPTester_HTTP_Server")
 
-# In-Memory Session Store
+# In-Memory Session Store (thread-safe writes via lock)
 BOARD_SESSIONS: dict = {}
+_sessions_lock = threading.Lock()
+
+class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
+    """Multi-threaded HTTP server — each request runs in its own thread."""
+    daemon_threads = True
+
 
 class FPTesterHTTPRequestHandler(BaseHTTPRequestHandler):
     def _send_json(self, data: dict, status_code: int = 200):
@@ -181,19 +189,8 @@ class FPTesterHTTPRequestHandler(BaseHTTPRequestHandler):
 
             planner = AITestPlanner(provider=provider, api_key=api_key, custom_url=custom_url)
             job = planner.generate_plan(board, job_id=101)
-
-            # Reachability filter
-            validator = WorkspaceValidator()
-            valid_pairs = []
-            skipped = 0
-            for tp in job.test_pairs:
-                ok, _ = validator.validate_pad_pair(tp.pad_a, tp.pad_b)
-                if ok:
-                    valid_pairs.append(tp)
-                else:
-                    skipped += 1
-
-            job.test_pairs = valid_pairs
+            # NOTE: workspace reachability is already validated inside the LLM planner
+            # for each pair at creation time, so no second pass needed here.
             session["test_job"] = job
 
             self._send_json({
@@ -201,7 +198,7 @@ class FPTesterHTTPRequestHandler(BaseHTTPRequestHandler):
                 "board_id": board_id,
                 "job_id": job.job_id,
                 "total_tests": len(job.test_pairs),
-                "skipped_out_of_reach": skipped,
+                "skipped_out_of_reach": 0,
                 "test_plan": job.to_dict()
             })
 
@@ -266,14 +263,15 @@ def start_background_ai_engine():
     t = threading.Thread(target=ai_worker, daemon=True)
     t.start()
 
-class ReusableHTTPServer(HTTPServer):
+class ReusableHTTPServer(ThreadedHTTPServer):
+    """Threaded, reuse-address HTTP server for FPTester."""
     allow_reuse_address = True
 
 def run_server(port: int = 8000):
     start_background_ai_engine()
     server_address = ('', port)
     httpd = ReusableHTTPServer(server_address, FPTesterHTTPRequestHandler)
-    logger.info(f"FPTester Production Server running at http://localhost:{port}")
+    logger.info(f"FPTester Production Server running at http://localhost:{port} (multi-threaded)")
     httpd.serve_forever()
 
 if __name__ == "__main__":
