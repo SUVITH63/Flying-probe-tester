@@ -19,11 +19,11 @@
 Like **G-Helper**, OpenFPT is packaged as a lightweight, zero-installation standalone executable. Download and run instantly without installing Python or external dependencies!
 
 <p align="center">
-  <a href="https://github.com/SUVITH63/Flying-probe-tester/releases/latest/download/OpenFPT-Windows-x64.zip">
+  <a href="https://github.com/SUVITH63/Flying-probe-tester/releases">
     <img src="https://img.shields.io/badge/Download_for_Windows-OpenFPT--v2.0.0.zip-0078D4?style=for-the-badge&logo=windows&logoColor=white" height="48" alt="Download for Windows" />
   </a>
   &nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="https://github.com/SUVITH63/Flying-probe-tester/releases/latest/download/OpenFPT-macOS.zip">
+  <a href="https://github.com/SUVITH63/Flying-probe-tester/releases">
     <img src="https://img.shields.io/badge/Download_for_macOS-OpenFPT--v2.0.0.zip-000000?style=for-the-badge&logo=apple&logoColor=white" height="48" alt="Download for macOS" />
   </a>
 </p>
