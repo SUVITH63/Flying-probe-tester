@@ -1,0 +1,19 @@
+# Python cache and compiled files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# macOS metadata files
+._*
+.DS_Store
+__MACOSX/
+
+# Environments
+.venv/
+venv/
+ENV/
+
+# Output test plans
+test_plan.json
+uploaded_design.kicad_pcb

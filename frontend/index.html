@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenFPT — Automated Flying Probe PCB Tester</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0a0d14;
+            --panel-bg: #121824;
+            --border-color: #1e293b;
+            --accent-amber: #f59e0b;
+            --accent-cyan: #06b6d4;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* Header Bar */
+        header {
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 16px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--accent-amber), #d97706);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            color: #000;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .logo-title {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .mode-badge {
+            background: rgba(245, 158, 11, 0.15);
+            border: 1px solid var(--accent-amber);
+            color: var(--accent-amber);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+        }
+
+        /* Main Grid */
+        main {
+            display: grid;
+            grid-template-columns: 360px 1fr 380px;
+            gap: 20px;
+            padding: 24px;
+            flex: 1;
+        }
+
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .panel-title {
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* Upload Zone */
+        .dropzone {
+            border: 2px dashed #334155;
+            border-radius: 8px;
+            padding: 32px 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: rgba(15, 23, 42, 0.5);
+        }
+
+        .dropzone:hover, .dropzone.active {
+            border-color: var(--accent-amber);
+            background: rgba(245, 158, 11, 0.05);
+        }
+
+        .btn {
+            background: var(--accent-amber);
+            color: #000;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            transition: opacity 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn:hover { opacity: 0.9; }
+
+        .btn-secondary {
+            background: #1e293b;
+            color: var(--text-main);
+            border: 1px solid #334155;
+        }
+
+        .btn-secondary:hover { background: #334155; }
+
+        /* Board Stats Card */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .stat-box {
+            background: #0f172a;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--accent-cyan);
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        /* Center Canvas Simulation */
+        .canvas-container {
+            position: relative;
+            flex: 1;
+            background: #07090e;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .canvas-overlay {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(8px);
+            padding: 10px 16px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+        }
+
+        /* Test Sequence & Log Panel */
+        .test-list {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 280px;
+        }
+
+        .test-card {
+            background: #0f172a;
+            border: 1px solid var(--border-color);
+            padding: 10px 14px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+        }
+
+        .test-card.active { border-color: var(--accent-amber); }
+        .test-card.pass { border-color: var(--accent-green); }
+        .test-card.fail { border-color: var(--accent-red); }
+
+        .verdict-tag {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 700;
+        }
+        .verdict-pass { background: rgba(16, 185, 129, 0.2); color: var(--accent-green); }
+        .verdict-fail { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); }
+
+        .console-log {
+            background: #05070a;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: #10b981;
+            height: 140px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-group">
+            <div class="logo-icon">FPT</div>
+            <div>
+                <div class="logo-title">OpenFPT — Flying Probe PCB Tester</div>
+                <div style="font-size: 11px; color: var(--text-muted);">AI-Powered Camera-less Dual-Arm Electrical Evaluation System</div>
+            </div>
+        </div>
+        <div style="display: flex; gap: 16px; align-items: center;">
+            <div class="mode-badge" id="modeBadge">LAPTOP SIMULATION MODE</div>
+            <select id="comPortSelect" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;">
+                <option value="SIMULATED_COM1">SIMULATED_COM1 (Laptop Screen)</option>
+            </select>
+        </div>
+    </header>
+
+    <main>
+        <!-- LEFT PANEL: File Upload & Board Summary -->
+        <div class="panel">
+            <div class="panel-title">1. Design Upload</div>
+            <div class="dropzone" id="dropzone">
+                <input type="file" id="fileInput" accept=".kicad_pcb,.gbr,.pho" style="display: none;">
+                <div style="font-size: 32px; margin-bottom: 8px;">📁</div>
+                <div style="font-weight: 600; margin-bottom: 4px;">Drag & Drop PCB File</div>
+                <div style="font-size: 11px; color: var(--text-muted);">Supports KiCad (.kicad_pcb) & Gerber (.gbr)</div>
+            </div>
+
+            <div class="panel-title">2. Board Analysis</div>
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-value" id="statPads">0</div>
+                    <div class="stat-label">Total PCB Pads</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="statComps">0</div>
+                    <div class="stat-label">Components</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="statNets">0</div>
+                    <div class="stat-label">Nets Identified</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="statSize">0 x 0</div>
+                    <div class="stat-label">Size (mm)</div>
+                </div>
+            </div>
+
+            <button class="btn" id="btnGenPlan" disabled>⚡ Generate AI Test Plan</button>
+            <button class="btn btn-secondary" id="btnSimulate" disabled>▶ Run Dual-Arm Simulation</button>
+        </div>
+
+        <!-- CENTER PANEL: Interactive 2D Dual-Arm Kinematics Canvas -->
+        <div class="panel" style="padding: 12px;">
+            <div class="panel-title">
+                <span>3. Live Dual 5-Bar Arm Kinematics & PCB Visualizer</span>
+                <span style="font-size: 11px; color: var(--accent-cyan);" id="statusIndicator">Ready</span>
+            </div>
+            <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                <button class="btn btn-secondary" id="btnRotateBlue" style="padding: 6px 12px; font-size: 11px;">🔄 Rotate Blue Arm Up</button>
+                <button class="btn btn-secondary" id="btnAlignProbes" style="padding: 6px 12px; font-size: 11px;">🎯 Align Probes</button>
+                <button class="btn btn-secondary" id="btnResetArms" style="padding: 6px 12px; font-size: 11px;">↺ Reset Arms</button>
+            </div>
+            <div class="canvas-container">
+                <canvas id="simCanvas"></canvas>
+                <div class="canvas-overlay">
+                    <div>ARM 0 (Top): <span id="arm0Coords" style="color: var(--accent-amber);">(0.0, 57.5)</span></div>
+                    <div>ARM 1 (Bot): <span id="arm1Coords" style="color: var(--accent-cyan);">(0.0, 57.5)</span></div>
+                    <div style="font-size: 10px; color: #94a3b8; margin-top: 4px;">💡 Drag flex handles on canvas to rotate arms</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT PANEL: Test Sequence & Oscilloscope Console -->
+        <div class="panel">
+            <div class="panel-title">4. AI Test Plan & Sequence</div>
+            <div class="test-list" id="testList">
+                <div style="text-align: center; color: var(--text-muted); margin-top: 40px; font-size: 12px;">
+                    Upload a PCB design file to generate probing sequence.
+                </div>
+            </div>
+
+            <div class="panel-title">5. Electrical Log & Diagnostic Card</div>
+            <div class="console-log" id="consoleLog">> OpenFPT System Ready. Upload .kicad_pcb or .gbr design file to begin.</div>
+        </div>
+    </main>
+
+    <script>
+        // State
+        let currentBoardId = null;
+        let currentTestPlan = null;
+        let isSimulating = false;
+
+        // Kinematics & Arm State (Local PCB mm coords: (x, y))
+        let arm0Target = { x: -15, y: 50 };
+        let arm1Target = { x: 15, y: 65 };
+        let activeDragArm = null; // 0, 1, or null
+
+        // Kinematics Parameters (Matching CAD: L0=80, L1=35, L2=70, D=115)
+        const KIN = { L0: 80, L1: 35, L2: 70, D: 115 };
+
+        // Elements
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('fileInput');
+        const btnGenPlan = document.getElementById('btnGenPlan');
+        const btnSimulate = document.getElementById('btnSimulate');
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+        const consoleLog = document.getElementById('consoleLog');
+
+        // Drag & Drop
+        dropzone.addEventListener('click', () => fileInput.click());
+        dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('active'); });
+        dropzone.addEventListener('dragleave', () => dropzone.classList.remove('active'));
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('active');
+            if (e.dataTransfer.files.length) uploadFile(e.dataTransfer.files[0]);
+        });
+        fileInput.addEventListener('change', (e) => { if (e.target.files.length) uploadFile(e.target.files[0]); });
+
+        function log(msg) {
+            consoleLog.innerText += '\n> ' + msg;
+            consoleLog.scrollTop = consoleLog.scrollHeight;
+        }
+
+        async function uploadFile(file) {
+            log(`Uploading design file: ${file.name}...`);
+            try {
+                const textContent = await file.text();
+                const res = await fetch(`/api/upload?filename=${encodeURIComponent(file.name)}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: textContent
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    currentBoardId = data.board_id;
+                    document.getElementById('statPads').innerText = data.total_pads;
+                    document.getElementById('statComps').innerText = data.total_components;
+                    document.getElementById('statNets').innerText = data.total_nets;
+                    document.getElementById('statSize').innerText = `${data.dimensions.width}x${data.dimensions.height}`;
+
+                    btnGenPlan.disabled = false;
+                    log(`Parsed successfully! ${data.total_pads} pads, ${data.total_components} components.`);
+                    drawCanvas(null, null);
+                } else {
+                    log(`Upload failed: ${data.message || 'Parsing error'}`);
+                }
+            } catch (err) {
+                log(`Error uploading file: ${err.message}`);
+            }
+        }
+
+        btnGenPlan.addEventListener('click', async () => {
+            if (!currentBoardId) return;
+            log('Invoking AI Test Plan Engine...');
+            try {
+                const res = await fetch(`/api/generate-plan/${currentBoardId}`, { method: 'POST' });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    currentTestPlan = data.test_plan;
+                    btnSimulate.disabled = false;
+                    renderTestPlan(data.test_plan);
+                    log(`AI Test Plan generated! Total probe pairs: ${data.total_tests}`);
+                }
+            } catch (err) {
+                log(`Error generating test plan: ${err.message}`);
+            }
+        });
+
+        function renderTestPlan(plan) {
+            const list = document.getElementById('testList');
+            list.innerHTML = '';
+            plan.commands.forEach((cmd, idx) => {
+                const meta = cmd.meta;
+                const card = document.createElement('div');
+                card.className = 'test-card';
+                card.id = `test-card-${meta.test_id}`;
+                card.innerHTML = `
+                    <div>
+                        <div style="font-weight: 700;">#${meta.test_id} Net: ${meta.net}</div>
+                        <div style="color: var(--text-muted); font-size: 11px;">${meta.pad_a_ref} -> ${meta.pad_b_ref}</div>
+                    </div>
+                    <div class="verdict-tag" id="verdict-${meta.test_id}">READY</div>
+                `;
+                list.appendChild(card);
+            });
+        }
+
+        btnSimulate.addEventListener('click', async () => {
+            if (!currentBoardId || isSimulating) return;
+            isSimulating = true;
+            log('Starting dual 5-bar robotic arm simulation...');
+            document.getElementById('statusIndicator').innerText = 'Simulating Probe Cycle...';
+
+            try {
+                const res = await fetch(`/api/simulate-run/${currentBoardId}`, { method: 'POST' });
+                const data = await res.json();
+                
+                for (let step of data.results) {
+                    // Highlight active card
+                    const card = document.getElementById(`test-card-${step.test_id}`);
+                    if (card) card.classList.add('active');
+
+                    // Animate arms moving to target pad coordinates
+                    await animateArmMove(step.pad_a, step.pad_b);
+
+                    // Update result tag
+                    const verdictTag = document.getElementById(`verdict-${step.test_id}`);
+                    if (verdictTag) {
+                        verdictTag.innerText = `${step.measured_voltage}V [${step.verdict}]`;
+                        verdictTag.className = `verdict-tag ${step.verdict === 'PASS' ? 'verdict-pass' : 'verdict-fail'}`;
+                    }
+
+                    if (card) {
+                        card.classList.remove('active');
+                        card.classList.add(step.verdict.toLowerCase());
+                    }
+
+                    log(`Test #${step.test_id} (${step.net}): ${step.pad_a.ref} -> ${step.pad_b.ref} = ${step.measured_voltage}V (${step.verdict})`);
+                    await new Promise(r => setTimeout(r, 600));
+                }
+                log('Dual-arm probing sequence complete! All nets verified.');
+            } catch (err) {
+                log(`Simulation error: ${err.message}`);
+            }
+            isSimulating = false;
+            document.getElementById('statusIndicator').innerText = 'Ready';
+        });
+
+        // 2D Canvas Kinematics Rendering Engine
+        function resizeCanvas() {
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+            drawCanvas(null, null);
+        }
+        window.addEventListener('resize', resizeCanvas);
+        setTimeout(resizeCanvas, 100);
+
+        async function animateArmMove(padA, padB) {
+            const steps = 15;
+            for (let i = 1; i <= steps; i++) {
+                drawCanvas(padA, padB, i / steps);
+                await new Promise(r => setTimeout(r, 20));
+            }
+        }
+
+        // 5-Bar Circle Intersection IK Helper
+        function getCircleIntersection(c1, r1, c2, r2, altSolution = false) {
+            const dx = c2.x - c1.x;
+            const dy = c2.y - c1.y;
+            const d = Math.hypot(dx, dy);
+            if (d > r1 + r2 || d < Math.abs(r1 - r2) || d === 0) {
+                const midX = (c1.x + c2.x) / 2;
+                const midY = (c1.y + c2.y) / 2;
+                return { x: midX, y: midY };
+            }
+            const a = (r1 * r1 - r2 * r2 + d * d) / (2 * d);
+            const h = Math.sqrt(Math.max(0, r1 * r1 - a * a));
+            const x2 = c1.x + (a * dx) / d;
+            const y2 = c1.y + (a * dy) / d;
+            const rx = -dy * (h / d);
+            const ry = dx * (h / d);
+
+            return altSolution ? { x: x2 - rx, y: y2 - ry } : { x: x2 + rx, y: y2 + ry };
+        }
+
+        function drawCanvas(padA, padB, progress = 1.0) {
+            const w = canvas.width;
+            const h = canvas.height;
+            ctx.clearRect(0, 0, w, h);
+
+            if (w === 0 || h === 0) return;
+
+            const cx = w / 2;
+            const cy = h / 2;
+            const scale = 2.2;
+
+            const pcbW = 220;
+            const pcbH = 140;
+
+            // Draw Background Grid
+            ctx.strokeStyle = '#111827';
+            ctx.lineWidth = 1;
+            for (let x = 0; x < w; x += 25) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+            }
+            for (let y = 0; y < h; y += 25) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+            }
+
+            // Draw PCB Area Boundary
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 2;
+            ctx.fillStyle = '#0a101d';
+            ctx.fillRect(cx - pcbW / 2, cy - pcbH / 2, pcbW, pcbH);
+            ctx.strokeRect(cx - pcbW / 2, cy - pcbH / 2, pcbW, pcbH);
+
+            // PCB Crosshairs
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(cx - pcbW / 2, cy); ctx.lineTo(cx + pcbW / 2, cy);
+            ctx.moveTo(cx, cy - pcbH / 2); ctx.lineTo(cx, cy + pcbH / 2);
+            ctx.stroke();
+
+            // Draw Datum Jig Centerpoint (0, 57.5)
+            ctx.fillStyle = '#ef4444';
+            ctx.beginPath();
+            ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Target Coordinates
+            let p0 = padA ? { x: padA.x, y: padA.y } : arm0Target;
+            let p1 = padB ? { x: padB.x, y: padB.y } : arm1Target;
+
+            // Map PCB mm coordinates to canvas pixel coordinates
+            const target0Canvas = {
+                x: cx + p0.x * scale,
+                y: cy + (p0.y - 57.5) * scale
+            };
+
+            const target1Canvas = {
+                x: cx + p1.x * scale,
+                y: cy + (p1.y - 57.5) * scale
+            };
+
+            // Base Motor Positions
+            const arm0BaseY = cy - 110;
+            const arm1BaseY = cy + 110;
+
+            const arm0MotorA = { x: cx - 55 * scale, y: arm0BaseY };
+            const arm0MotorB = { x: cx + 55 * scale, y: arm0BaseY };
+
+            const arm1MotorA = { x: cx - 55 * scale, y: arm1BaseY };
+            const arm1MotorB = { x: cx + 55 * scale, y: arm1BaseY };
+
+            // Draw Arm 0 (Top - Orange) extending DOWN towards PCB
+            draw5BarArm(ctx, arm0MotorA, arm0MotorB, target0Canvas, '#f59e0b', true, 'ARM 0');
+
+            // Draw Arm 1 (Bottom - Cyan/Blue) extending UP towards Orange & PCB
+            draw5BarArm(ctx, arm1MotorA, arm1MotorB, target1Canvas, '#06b6d4', false, 'ARM 1');
+
+            // Update Overlay Text
+            document.getElementById('arm0Coords').innerText = `(${p0.x.toFixed(1)}, ${p0.y.toFixed(1)})`;
+            document.getElementById('arm1Coords').innerText = `(${p1.x.toFixed(1)}, ${p1.y.toFixed(1)})`;
+        }
+
+        function draw5BarArm(ctx, motorA, motorB, probeTip, color, isTopArm, label) {
+            const L1 = 65; // Proximal link length in px
+            const L2 = 95; // Distal link length in px
+
+            // Compute Elbow Joint Positions via Inverse Kinematics
+            const elbowA = getCircleIntersection(motorA, L1, probeTip, L2, !isTopArm);
+            const elbowB = getCircleIntersection(motorB, L1, probeTip, L2, isTopArm);
+
+            // 1. Draw Base Plate Bar
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 8;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(motorA.x - 15, motorA.y);
+            ctx.lineTo(motorB.x + 15, motorB.y);
+            ctx.stroke();
+
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(motorA.x - 15, motorA.y);
+            ctx.lineTo(motorB.x + 15, motorB.y);
+            ctx.stroke();
+
+            // 2. Draw Links (Motor -> Elbow -> Probe Tip)
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(motorA.x, motorA.y);
+            ctx.lineTo(elbowA.x, elbowA.y);
+            ctx.lineTo(probeTip.x, probeTip.y);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(motorB.x, motorB.y);
+            ctx.lineTo(elbowB.x, elbowB.y);
+            ctx.lineTo(probeTip.x, probeTip.y);
+            ctx.stroke();
+
+            // 3. Draw Motor Pivot Handles
+            [motorA, motorB].forEach(m => {
+                ctx.fillStyle = '#1e293b';
+                ctx.beginPath(); ctx.arc(m.x, m.y, 9, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke();
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath(); ctx.arc(m.x, m.y, 4, 0, Math.PI * 2); ctx.fill();
+            });
+
+            // 4. Draw Elbow Joint Handles
+            [elbowA, elbowB].forEach(e => {
+                ctx.fillStyle = '#0f172a';
+                ctx.beginPath(); ctx.arc(e.x, e.y, 6, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke();
+            });
+
+            // 5. Draw Probe Head & Hook Needle
+            ctx.fillStyle = color;
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 10;
+            ctx.beginPath(); ctx.arc(probeTip.x, probeTip.y, 8, 0, Math.PI * 2); ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // Hook Needle pointing towards target center
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(probeTip.x, probeTip.y);
+            const hookOffsetY = isTopArm ? 14 : -14;
+            ctx.lineTo(probeTip.x, probeTip.y + hookOffsetY);
+            ctx.stroke();
+
+            // Probe needle tip point
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath(); ctx.arc(probeTip.x, probeTip.y + hookOffsetY, 2.5, 0, Math.PI * 2); ctx.fill();
+
+            // 6. Draw Flex Handle Ring
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath(); ctx.arc(probeTip.x, probeTip.y, 16, 0, Math.PI * 2); ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        // Handle Controls & Interactive Canvas Dragging
+        const btnRotateBlue = document.getElementById('btnRotateBlue');
+        const btnAlignProbes = document.getElementById('btnAlignProbes');
+        const btnResetArms = document.getElementById('btnResetArms');
+
+        if (btnRotateBlue) {
+            btnRotateBlue.addEventListener('click', () => {
+                // Rotate / move blue arm (Arm 1) up toward the orange arm (Arm 0)
+                arm1Target.x = arm0Target.x;
+                arm1Target.y = arm0Target.y + 12;
+                drawCanvas(null, null);
+                log('Rotated & positioned Blue Arm (Arm 1) up toward Orange Arm (Arm 0).');
+            });
+        }
+
+        if (btnAlignProbes) {
+            btnAlignProbes.addEventListener('click', () => {
+                arm0Target = { x: -10, y: 50 };
+                arm1Target = { x: 10, y: 65 };
+                drawCanvas(null, null);
+                log('Aligned probe arms to default center positions.');
+            });
+        }
+
+        if (btnResetArms) {
+            btnResetArms.addEventListener('click', () => {
+                arm0Target = { x: -20, y: 40 };
+                arm1Target = { x: 20, y: 75 };
+                drawCanvas(null, null);
+                log('Reset probe arms to home positions.');
+            });
+        }
+
+        function getCanvasCoords(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return {
+                x: clientX - rect.left,
+                y: clientY - rect.top
+            };
+        }
+
+        function canvasToPcbCoords(canvasX, canvasY) {
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+            const scale = 2.2;
+            return {
+                x: (canvasX - cx) / scale,
+                y: (canvasY - cy) / scale + 57.5
+            };
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            const pt = getCanvasCoords(e);
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+            const scale = 2.2;
+
+            const t0Canvas = { x: cx + arm0Target.x * scale, y: cy + (arm0Target.y - 57.5) * scale };
+            const t1Canvas = { x: cx + arm1Target.x * scale, y: cy + (arm1Target.y - 57.5) * scale };
+
+            const d0 = Math.hypot(pt.x - t0Canvas.x, pt.y - t0Canvas.y);
+            const d1 = Math.hypot(pt.x - t1Canvas.x, pt.y - t1Canvas.y);
+
+            if (d0 < 30) {
+                activeDragArm = 0;
+            } else if (d1 < 30) {
+                activeDragArm = 1;
+            } else {
+                activeDragArm = d0 < d1 ? 0 : 1;
+                const pcb = canvasToPcbCoords(pt.x, pt.y);
+                if (activeDragArm === 0) arm0Target = pcb;
+                else arm1Target = pcb;
+                drawCanvas(null, null);
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (activeDragArm !== null) {
+                const pt = getCanvasCoords(e);
+                const pcb = canvasToPcbCoords(pt.x, pt.y);
+                if (activeDragArm === 0) {
+                    arm0Target = pcb;
+                } else {
+                    arm1Target = pcb;
+                }
+                drawCanvas(null, null);
+            }
+        });
+
+        window.addEventListener('mouseup', () => { activeDragArm = null; });
+        canvas.addEventListener('touchstart', (e) => {
+            const pt = getCanvasCoords(e);
+            const pcb = canvasToPcbCoords(pt.x, pt.y);
+            arm1Target = pcb;
+            activeDragArm = 1;
+            drawCanvas(null, null);
+        });
+        canvas.addEventListener('touchmove', (e) => {
+            if (activeDragArm !== null) {
+                const pt = getCanvasCoords(e);
+                arm1Target = canvasToPcbCoords(pt.x, pt.y);
+                drawCanvas(null, null);
+            }
+        });
+        window.addEventListener('touchend', () => { activeDragArm = null; });
+    </script>
+</body>
+</html>

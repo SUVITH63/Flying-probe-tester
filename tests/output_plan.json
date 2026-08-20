@@ -1,0 +1,100 @@
+{
+  "job_id": 101,
+  "board_name": "host/tests/sample_demo.kicad_pcb",
+  "total_tests": 3,
+  "commands": [
+    {
+      "msg_type": "run_test",
+      "job_id": 101,
+      "test_type": "digital_high_adc_read",
+      "arms": [
+        {
+          "arm_id": 0,
+          "x": -1.5,
+          "y": 57.5
+        },
+        {
+          "arm_id": 1,
+          "x": 2.5,
+          "y": 57.5
+        }
+      ],
+      "test_params": {
+        "tx_arm_id": 0,
+        "rx_arm_id": 1,
+        "tx_high_time_ms": 100
+      },
+      "meta": {
+        "test_id": 1,
+        "net": "+3V3",
+        "pad_a_ref": "R1-2",
+        "pad_b_ref": "R2-2",
+        "expected_min_v": 3.0,
+        "expected_max_v": 3.3,
+        "description": "Continuity check on net '+3V3' between R1-2 and R2-2"
+      }
+    },
+    {
+      "msg_type": "run_test",
+      "job_id": 101,
+      "test_type": "digital_high_adc_read",
+      "arms": [
+        {
+          "arm_id": 0,
+          "x": 2.5,
+          "y": 57.5
+        },
+        {
+          "arm_id": 1,
+          "x": 0.5,
+          "y": 57.5
+        }
+      ],
+      "test_params": {
+        "tx_arm_id": 0,
+        "rx_arm_id": 1,
+        "tx_high_time_ms": 100
+      },
+      "meta": {
+        "test_id": 2,
+        "net": "+3V3",
+        "pad_a_ref": "R2-2",
+        "pad_b_ref": "C1-2",
+        "expected_min_v": 3.0,
+        "expected_max_v": 3.3,
+        "description": "Continuity check on net '+3V3' between R2-2 and C1-2"
+      }
+    },
+    {
+      "msg_type": "run_test",
+      "job_id": 101,
+      "test_type": "digital_high_adc_read",
+      "arms": [
+        {
+          "arm_id": 0,
+          "x": -2.5,
+          "y": 57.5
+        },
+        {
+          "arm_id": 1,
+          "x": 1.5,
+          "y": 57.5
+        }
+      ],
+      "test_params": {
+        "tx_arm_id": 0,
+        "rx_arm_id": 1,
+        "tx_high_time_ms": 100
+      },
+      "meta": {
+        "test_id": 3,
+        "net": "SDA",
+        "pad_a_ref": "R1-1",
+        "pad_b_ref": "R2-1",
+        "expected_min_v": 3.0,
+        "expected_max_v": 3.3,
+        "description": "Continuity check on net 'SDA' between R1-1 and R2-1"
+      }
+    }
+  ]
+}
