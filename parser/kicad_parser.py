@@ -24,6 +24,8 @@ class SExpParser:
     def _tokenize(s: str) -> List[str]:
         # Strip comments
         s = re.sub(r';.*$', '', s, flags=re.MULTILINE)
+        # Pre-quote unquoted net strings containing inner parentheses like Net-(U3-VI)
+        s = re.sub(r'(?<=\s|\()([^\s()"\'\\]+\([^\s()"\'\\]+\)[^\s()"\'\\]*)(?=\s|\))', r'"\1"', s)
         token_pattern = re.compile(r'[()]|"(?:\\.|[^"\\])*"|[^\s()]+')
         return token_pattern.findall(s)
 
