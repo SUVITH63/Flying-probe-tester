@@ -642,14 +642,16 @@
             }
 
             // Map PCB mm coordinates to canvas pixel coordinates
+            // Probe Head offsets: Arm 0 head is 14px above pad; Arm 1 head is 14px below pad
+            // This ensures probe heads stay 28px (~13mm) apart vertically even for adjacent pads
             const target0Canvas = {
                 x: cx + p0.x * scale,
-                y: cy + (p0.y - 57.5) * scale
+                y: cy + (p0.y - 57.5) * scale - 14
             };
 
             const target1Canvas = {
                 x: cx + p1.x * scale,
-                y: cy + (p1.y - 57.5) * scale
+                y: cy + (p1.y - 57.5) * scale + 14
             };
 
             // Base Motor Positions
@@ -678,8 +680,10 @@
             const L2 = 95; // Distal link length in px
 
             // Compute Elbow Joint Positions via Inverse Kinematics
-            const elbowA = getCircleIntersection(motorA, L1, probeTip, L2, !isTopArm);
-            const elbowB = getCircleIntersection(motorB, L1, probeTip, L2, isTopArm);
+            // Force outward elbow bending (Left motor bends Left, Right motor bends Right)
+            // so link arms never cross or collide into the center workspace
+            const elbowA = getCircleIntersection(motorA, L1, probeTip, L2, false);
+            const elbowB = getCircleIntersection(motorB, L1, probeTip, L2, true);
 
             // 1. Draw Base Plate Bar
             ctx.strokeStyle = '#1e293b';
