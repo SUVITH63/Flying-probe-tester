@@ -19,13 +19,19 @@
 Like **G-Helper**, FPTester is packaged as a lightweight, zero-installation standalone executable. Download and run instantly without installing Python or external dependencies!
 
 <p align="center">
-  <a href="https://github.com/SUVITH63/Flying-probe-tester/releases">
-    <img src="https://img.shields.io/badge/Download_for_Windows-FPTester--v2.0.0.zip-0078D4?style=for-the-badge&logo=windows&logoColor=white" height="48" alt="Download for Windows" />
+  <a href="https://github.com/SUVITH63/Flying-probe-tester/releases/download/v1.1.0/FPTester-Windows.exe">
+    <img src="https://img.shields.io/badge/Download_for_Windows-FPTester--Windows.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" height="48" alt="Download for Windows (.exe)" />
   </a>
   &nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="https://github.com/SUVITH63/Flying-probe-tester/releases">
-    <img src="https://img.shields.io/badge/Download_for_macOS-FPTester--v2.0.0.zip-000000?style=for-the-badge&logo=apple&logoColor=white" height="48" alt="Download for macOS" />
+  <a href="https://github.com/SUVITH63/Flying-probe-tester/releases/download/v1.1.0/FPTester-macOS-x64.zip">
+    <img src="https://img.shields.io/badge/Download_for_macOS-FPTester--macOS.zip-000000?style=for-the-badge&logo=apple&logoColor=white" height="48" alt="Download for macOS (.zip)" />
   </a>
+</p>
+
+<p align="center">
+  📦 <b>Direct One-Click Download Links:</b><br>
+  🔹 <b>Windows (.exe):</b> <a href="https://github.com/SUVITH63/Flying-probe-tester/releases/download/v1.1.0/FPTester-Windows.exe">FPTester-Windows.exe (Direct Download)</a> | <a href="https://github.com/SUVITH63/Flying-probe-tester/releases/download/v1.1.0/FPTester-Windows-1Click.zip">FPTester-Windows-1Click.zip</a><br>
+  🍎 <b>macOS (.zip):</b> <a href="https://github.com/SUVITH63/Flying-probe-tester/releases/download/v1.1.0/FPTester-macOS-x64.zip">FPTester-macOS-x64.zip (Direct Download)</a>
 </p>
 
 > **Quick Launch (Windows):** Simply extract the `.zip` file and double-click **`FPTester.exe`** (or `FPTester-Launcher.bat`). It will automatically start the backend server and launch your web browser at `http://localhost:8000`.
