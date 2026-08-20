@@ -4,7 +4,18 @@ This application is **completely self-contained** and can be run on **any laptop
 
 ---
 
-## 🚀 How to Run on Any Laptop
+## 📦 Download Standalone Executable (1-Click Download like G-Helper)
+
+You can download single executable app binaries directly from GitHub Releases:
+👉 **[Download Latest Releases (Windows / macOS / Linux)](https://github.com/SUVITH63/Flying-probe-tester/releases)**
+
+- **Windows**: Download `OpenFPT-Windows-x64.exe` and double-click to run!
+- **macOS**: Download `OpenFPT-macOS-x64` and double-click to run!
+- **Linux**: Download `OpenFPT-Linux-x64` and run in terminal.
+
+---
+
+## 🚀 How to Run from Source Code on Any Laptop
 
 ### 1. Windows Laptops
 Double-click `start_windows.bat` or run in Command Prompt:
