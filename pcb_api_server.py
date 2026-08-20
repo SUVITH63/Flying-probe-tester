@@ -228,6 +228,11 @@ def run_server(port: int = 8000):
     server_address = ('', port)
     httpd = HTTPServer(server_address, OpenFPTHTTPRequestHandler)
     logger.info(f"OpenFPT Production Server running at http://localhost:{port}")
+    try:
+        import webbrowser
+        webbrowser.open(f"http://localhost:{port}")
+    except Exception:
+        pass
     httpd.serve_forever()
 
 if __name__ == "__main__":

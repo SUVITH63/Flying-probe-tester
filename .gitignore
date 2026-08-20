@@ -1,19 +1,21 @@
-# Python cache and compiled files
+# Python Bytecode & Caches
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
+*$py.class
 
 # macOS metadata files
 ._*
 .DS_Store
-__MACOSX/
 
-# Environments
-.venv/
-venv/
-ENV/
+# PyInstaller Build Artifacts
+build/
+dist/
+*.spec
 
-# Output test plans
+# KiCad Lock files
+*.lck
+
+# Logs & Output Test Files
+*.log
+output_plan.json
 test_plan.json
-uploaded_design.kicad_pcb
